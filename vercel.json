@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/scrape.js": { "maxDuration": 60 },
+    "api/refresh.js": { "maxDuration": 60 },
+    "api/seed-history.js": { "maxDuration": 60 },
+    "api/scheduled-refresh.js": { "maxDuration": 60 }
+  }
+}

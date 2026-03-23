@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PriceHawk — Real Price Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#060a14;--bg1:#0c1120;--bg2:#111827;--bg3:#1a2236;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --green:#00d4a1;--green-d:rgba(0,212,161,0.12);
+  --red:#ff5c5c;--red-d:rgba(255,92,92,0.12);
+  --blue:#4f9eff;--blue-d:rgba(79,158,255,0.12);
+  --amber:#f59e0b;--amber-d:rgba(245,158,11,0.12);
+  --purple:#a78bfa;
+  --t1:#f1f5f9;--t2:#94a3b8;--t3:#475569;
+  --f1:'Syne',sans-serif;--f2:'JetBrains Mono',monospace;
+  --r1:8px;--r2:12px;--r3:16px;
+}
+body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100vh;display:flex;overflow:hidden}
+#sidebar{width:220px;min-width:220px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow-y:auto}
+.logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.logo-text{font-size:17px;font-weight:800;letter-spacing:-0.5px}.logo-text span{color:var(--green)}
+.nav-section{padding:14px 10px 6px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:2px 8px;border-radius:var(--r1);cursor:pointer;font-size:13.5px;font-weight:500;color:var(--t2);transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--bg2);color:var(--t1)}.nav-item.active{background:var(--green-d);color:var(--green)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;font-family:var(--f2);padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:14px 10px;border-top:1px solid var(--border)}
+.sidebar-stat{font-size:11px;color:var(--t3);padding:3px 8px;display:flex;justify-content:space-between}
+.sidebar-stat span{color:var(--t2);font-family:var(--f2);font-weight:500}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#topbar{padding:14px 24px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.search-wrap{flex:1;position:relative;max-width:440px}
+.search-wrap input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:8px 32px 8px 36px;color:var(--t1);font-size:13.5px;font-family:var(--f1);outline:none;transition:border .15s}
+.search-wrap input:focus{border-color:rgba(79,158,255,.4)}
+.search-wrap input.url-mode{border-color:rgba(255,153,0,.5);background:rgba(255,153,0,.04)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:15px;pointer-events:none}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;line-height:1;padding:2px;display:none}
+.search-clear:hover{color:var(--t1)}
+.url-hint{position:absolute;top:100%;left:0;right:0;background:var(--bg3);border:1px solid rgba(255,153,0,.35);border-top:none;border-radius:0 0 var(--r1) var(--r1);padding:8px 12px;font-size:12px;color:var(--amber);display:none;z-index:10;cursor:pointer}
+.url-hint:hover{background:var(--bg2)}
+.topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r1);font-size:13px;font-weight:600;font-family:var(--f1);cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--green);color:#060a14}.btn-primary:hover{background:#00e6ae;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--bg2);color:var(--t2);border:1px solid var(--border2)}.btn-ghost:hover{color:var(--t1);background:var(--bg3)}
+.btn-ghost:disabled{opacity:.5;cursor:not-allowed}
+.btn-danger{background:var(--red-d);color:var(--red);border:1px solid rgba(255,92,92,.25)}.btn-danger:hover{background:rgba(255,92,92,.2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-amber{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,158,11,.25)}.btn-amber:hover{background:rgba(245,158,11,.2)}
+.notif-btn{position:relative;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:8px 12px;cursor:pointer;color:var(--t2);font-size:16px;display:flex;align-items:center;transition:all .15s}
+.notif-btn:hover{color:var(--t1)}
+.notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--bg1);display:none}
+.notif-dot.show{display:block}
+#content{flex:1;overflow-y:auto;padding:20px 24px;background:var(--bg0)}
+.view{display:none}.view.active{display:block}
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 var(--r2) 0 60px;opacity:.08}
+.metric-card.green::before{background:var(--green)}.metric-card.red::before{background:var(--red)}
+.metric-card.blue::before{background:var(--blue)}.metric-card.amber::before{background:var(--amber)}
+.metric-label{font-size:11.5px;color:var(--t3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.metric-value{font-size:26px;font-weight:800;font-family:var(--f2);letter-spacing:-1px;line-height:1}
+.metric-value.green{color:var(--green)}.metric-value.red{color:var(--red)}.metric-value.blue{color:var(--blue)}.metric-value.amber{color:var(--amber)}
+.metric-sub{font-size:11.5px;color:var(--t3);margin-top:5px}
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.filter-bar select{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:7px 10px;color:var(--t1);font-size:12.5px;font-family:var(--f1);outline:none;cursor:pointer}
+.view-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r1);overflow:hidden}
+.view-toggle button{background:none;border:none;padding:7px 10px;cursor:pointer;color:var(--t3);font-size:14px;transition:all .15s}
+.view-toggle button.active{background:var(--bg3);color:var(--t1)}
+.sort-label{font-size:12px;color:var(--t3);margin-left:auto}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.product-grid.list-view{grid-template-columns:1fr}
+.product-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);overflow:hidden;transition:all .2s;position:relative}
+.product-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.product-card.alert-triggered{border-color:rgba(0,212,161,.35)}
+.card-header{padding:14px 16px 10px;display:flex;align-items:flex-start;gap:10px}
+.platform-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;flex-shrink:0}
+.platform-badge.amazon{background:rgba(255,153,0,.15);color:#ff9900}
+.platform-badge.flipkart{background:rgba(79,158,255,.15);color:#4f9eff}
+.card-title{font-size:13.5px;font-weight:600;line-height:1.4;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;transition:color .15s}.card-title:hover{color:var(--blue);text-decoration:underline}
+.card-actions-top{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--t3);font-size:15px;padding:2px;transition:color .15s;line-height:1}
+.icon-btn:hover{color:var(--t1)}.icon-btn.fav.active{color:#f59e0b}.icon-btn.alert-on{color:var(--green)}
+.card-price-section{padding:8px 16px 10px;border-bottom:1px solid var(--border);cursor:pointer}
+.price-main{font-size:24px;font-weight:700;font-family:var(--f2);letter-spacing:-1px;line-height:1}
+.price-change{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-family:var(--f2);font-weight:500;padding:2px 7px;border-radius:20px;margin-left:8px;vertical-align:middle}
+.price-change.up{background:var(--red-d);color:var(--red)}.price-change.down{background:var(--green-d);color:var(--green)}.price-change.flat{background:var(--bg3);color:var(--t3)}
+.price-meta{display:flex;gap:14px;margin-top:6px}
+.price-meta-item{font-size:11px;color:var(--t3)}.price-meta-item span{color:var(--t2);font-family:var(--f2)}
+.atl-badge{display:inline-flex;align-items:center;gap:3px;background:var(--green-d);color:var(--green);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:4px}
+.sparkline-section{padding:4px 16px 12px;height:68px;position:relative}
+.card-footer{padding:10px 16px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--border)}
+.deal-score{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t3);margin-right:auto}
+.deal-bar{width:50px;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.deal-fill{height:100%;border-radius:2px;transition:width .3s}
+.card-cat{font-size:11px;background:var(--bg3);color:var(--t3);padding:2px 7px;border-radius:4px}
+.target-progress{margin-top:8px}
+.target-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:4px}
+.target-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .4s}
+.savings-text{font-size:11.5px;color:var(--green);margin-top:4px;font-family:var(--f2)}
+.alerts-list{display:flex;flex-direction:column;gap:12px}
+.alert-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;align-items:center;gap:16px}
+.alert-item.triggered{border-color:rgba(0,212,161,.3);background:rgba(0,212,161,.04)}
+.alert-info{flex:1}.alert-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.alert-prices{display:flex;gap:16px;font-size:12.5px;color:var(--t2)}.alert-prices span{font-family:var(--f2)}
+.alert-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.alert-badge.active{background:var(--green-d);color:var(--green)}.alert-badge.triggered{background:var(--amber-d);color:var(--amber)}.alert-badge.off{background:var(--bg3);color:var(--t3)}
+.compare-selector{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.compare-chip{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r1);padding:7px 12px;cursor:pointer;font-size:12.5px;color:var(--t2);transition:all .15s;display:flex;align-items:center;gap:6px}
+.compare-chip:hover{border-color:var(--border2);color:var(--t1)}.compare-chip.selected{background:var(--blue-d);border-color:rgba(79,158,255,.4);color:var(--blue)}
+.compare-table{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:20px}
+.compare-table table{width:100%;border-collapse:collapse}
+.compare-table th,.compare-table td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;text-align:left}
+.compare-table th{background:var(--bg3);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3)}
+.compare-table td:first-child{color:var(--t3);font-size:12px;font-weight:600;width:140px}.compare-table td.best{color:var(--green);font-weight:700}
+.compare-table tr:last-child td{border-bottom:none}
+.chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
+.chart-wrap h3{font-size:14px;font-weight:700;color:var(--t2);margin-bottom:16px}
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.analytics-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
+.analytics-card h3{font-size:13px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.best-deal-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.best-deal-item:last-child{border-bottom:none}
+.deal-rank{font-size:16px;font-weight:800;font-family:var(--f2);color:var(--t3);width:24px}
+.deal-info{flex:1}.deal-name{font-size:12.5px;font-weight:600;margin-bottom:2px}.deal-savings{font-size:11.5px;color:var(--green);font-family:var(--f2)}
+.platform-split{display:flex;gap:8px;margin-bottom:12px}
+.platform-split-item{flex:1;background:var(--bg3);border-radius:var(--r1);padding:10px;text-align:center}
+.platform-split-item .pct{font-size:20px;font-weight:700;font-family:var(--f2)}.platform-split-item .plabel{font-size:11px;color:var(--t3);margin-top:3px}
+.modal-overlay{position:fixed;inset:0;background:rgba(6,10,20,.85);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r3);max-width:560px;width:90%;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
+.modal.wide{max-width:720px}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-size:17px;font-weight:700}
+.modal-body{padding:20px 24px}
+.modal-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.close-btn{background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;padding:2px;line-height:1;transition:color .15s}
+.close-btn:hover{color:var(--t1)}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:10px 12px;color:var(--t1);font-size:13.5px;font-family:var(--f1);outline:none;transition:border .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(79,158,255,.5);box-shadow:0 0 0 3px rgba(79,158,255,.08)}
+.form-textarea{resize:vertical;min-height:72px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:11.5px;color:var(--t3);margin-top:5px}
+.platform-detect{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:20px;margin-top:6px}
+.platform-detect.amazon{background:rgba(255,153,0,.12);color:#ff9900}
+.platform-detect.flipkart{background:rgba(79,158,255,.12);color:var(--blue)}
+.platform-detect.unknown{background:var(--bg3);color:var(--t3)}
+.fetch-section{display:flex;gap:8px;align-items:flex-start}
+.fetch-section .form-input{flex:1}
+.fetch-status{margin-top:8px;font-size:12.5px;padding:8px 12px;border-radius:var(--r1);display:none}
+.fetch-status.loading{display:block;background:var(--blue-d);color:var(--blue)}
+.fetch-status.success{display:block;background:var(--green-d);color:var(--green)}
+.fetch-status.error{display:block;background:var(--red-d);color:var(--red)}
+#add-form-section{display:none;border-top:1px solid var(--border);margin-top:16px;padding-top:16px}
+.detail-price{font-size:36px;font-weight:800;font-family:var(--f2);letter-spacing:-2px}
+.detail-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.detail-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r1);padding:12px;text-align:center}
+.detail-stat-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.detail-stat-value{font-size:16px;font-weight:700;font-family:var(--f2)}
+.detail-stat-value.green{color:var(--green)}.detail-stat-value.red{color:var(--red)}.detail-stat-value.amber{color:var(--amber)}
+.history-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px}
+.history-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.history-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--t2);font-family:var(--f2)}
+.history-table tr:last-child td{border-bottom:none}
+.change-up{color:var(--red)}.change-dn{color:var(--green)}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);font-size:13px;font-weight:600;font-family:var(--f1);padding:8px 16px;cursor:pointer;transition:all .15s;margin-bottom:-1px}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn:hover:not(.active){color:var(--t1)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.toggle-switch{display:flex;align-items:center;gap:8px;cursor:pointer}
+.toggle{width:38px;height:20px;background:var(--bg3);border-radius:10px;position:relative;transition:background .2s}
+.toggle.on{background:var(--green)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+.notif-panel{position:fixed;top:58px;right:20px;width:320px;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r2);z-index:200;box-shadow:0 16px 48px rgba(0,0,0,.6);display:none}
+.notif-panel.show{display:block}
+.notif-head{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notif-head h3{font-size:13.5px;font-weight:700}
+.notif-list{max-height:360px;overflow-y:auto}
+.notif-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+.notif-item:last-child{border-bottom:none}
+.notif-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.notif-icon.green{background:var(--green-d);color:var(--green)}.notif-icon.blue{background:var(--blue-d);color:var(--blue)}
+.notif-text{font-size:12px;color:var(--t2);line-height:1.5}
+.notif-text strong{color:var(--t1);display:block;font-size:12.5px}
+.notif-time{font-size:10.5px;color:var(--t3);margin-top:2px}
+.notif-empty{padding:24px;text-align:center;color:var(--t3);font-size:13px}
+.clear-notif{font-size:11.5px;color:var(--t3);background:none;border:none;cursor:pointer;font-family:var(--f1)}
+.clear-notif:hover{color:var(--red)}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-head h2{font-size:16px;font-weight:700}
+.section-head p{font-size:12.5px;color:var(--t3);margin-top:2px}
+.count-badge{background:var(--bg3);color:var(--t3);font-size:11px;font-weight:700;font-family:var(--f2);padding:2px 8px;border-radius:20px;margin-left:8px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--t3)}
+.empty-state .icon{font-size:48px;margin-bottom:14px;opacity:.4}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--t2);margin-bottom:8px}
+.empty-state p{font-size:13.5px;max-width:300px;margin:0 auto 20px;line-height:1.6}
+/* Global loading overlay */
+#global-loading{position:fixed;inset:0;background:rgba(6,10,20,.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+#global-loading.show{display:flex}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--t2);font-size:14px;margin-top:16px;text-align:center}
+/* Scraping status */
+.scrape-loading{display:flex;align-items:center;gap:10px;background:var(--blue-d);border:1px solid rgba(79,158,255,.25);border-radius:var(--r1);padding:10px 14px;font-size:13px;color:var(--blue)}
+.scrape-success{background:var(--green-d);border-color:rgba(0,212,161,.25);color:var(--green)}
+.scrape-error{background:var(--red-d);border-color:rgba(255,92,92,.25);color:var(--red)}
+.mini-spinner{width:14px;height:14px;border:2px solid rgba(79,158,255,.3);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+/* Toast */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 16px;font-size:13px;color:var(--t1);box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;align-items:center;gap:8px;animation:toastIn .25s ease;min-width:260px}
+.toast.green{border-left:3px solid var(--green)}.toast.red{border-left:3px solid var(--red)}.toast.blue{border-left:3px solid var(--blue)}.toast.amber{border-left:3px solid var(--amber)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.97)}}
+.toast.hiding{animation:toastOut .2s ease forwards}
+.tag{background:var(--bg3);color:var(--t2);font-size:12px;padding:2px 8px;border-radius:4px;display:flex;align-items:center;gap:4px}
+.tag .tag-remove{cursor:pointer;color:var(--t3);font-size:11px}.tag .tag-remove:hover{color:var(--red)}
+.tag-input-wrap{display:flex;flex-wrap:wrap;gap:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:8px;cursor:text}
+.tag-input-wrap input{border:none;background:transparent;outline:none;color:var(--t1);font-size:13px;font-family:var(--f1);min-width:100px;flex:1}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.real-badge{display:inline-flex;align-items:center;gap:4px;background:var(--green-d);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(0,212,161,.2)}
+.last-updated{font-size:11px;color:var(--t3);font-family:var(--f2)}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL LOADING -->
+<div id="global-loading">
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Loading products...</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🦅</div>
+    <div class="logo-text">Price<span>Hawk</span></div>
+  </div>
+  <div style="padding:8px 18px 0;margin-bottom:4px">
+    <span class="real-badge">🟢 Live Data</span>
+  </div>
+  <div class="nav-section">Tracking</div>
+  <div class="nav-item active" onclick="switchView('dashboard')" id="nav-dashboard"><span class="ni">📊</span> Dashboard</div>
+  <div class="nav-item" onclick="switchView('alerts')" id="nav-alerts"><span class="ni">🔔</span> Alerts<span class="nav-badge" id="alerts-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="switchView('compare')" id="nav-compare"><span class="ni">⚖️</span> Compare</div>
+  <div class="nav-item" onclick="switchView('wishlist')" id="nav-wishlist"><span class="ni">⭐</span> Wishlist</div>
+  <div class="nav-section">Insights</div>
+  <div class="nav-item" onclick="switchView('analytics')" id="nav-analytics"><span class="ni">📈</span> Analytics</div>
+  <div class="nav-item" onclick="switchView('history-all')" id="nav-history-all"><span class="ni">🕐</span> Price History</div>
+  <div class="nav-section">Tools</div>
+  <div class="nav-item" onclick="doRefresh()" id="nav-refresh"><span class="ni">🔄</span> Refresh Prices</div>
+  <div class="nav-item" onclick="exportCSV()"><span class="ni">📤</span> Export CSV</div>
+  <div class="sidebar-footer">
+    <div class="sidebar-stat">Products <span id="sf-products">0</span></div>
+    <div class="sidebar-stat">Alerts Active <span id="sf-alerts">0</span></div>
+    <div class="sidebar-stat">Total Savings <span id="sf-savings">₹0</span></div>
+    <div class="sidebar-stat last-updated" id="sf-updated" style="font-size:10px;color:var(--t3)">Not refreshed yet</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search products… or paste Amazon/Flipkart URL" oninput="handleSearch(this.value)" onpaste="handlePaste(event)">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      <div class="url-hint" id="url-hint" onclick="addFromURLHint()">🟠 URL detected — click to track this product</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="openAddModal()">+ Add Product</button>
+      <button class="btn btn-primary" onclick="doRefresh()" id="refresh-btn">🔄 Refresh</button>
+      <div class="notif-btn" onclick="toggleNotifPanel()" id="notif-btn">🔔<div class="notif-dot" id="notif-dot"></div></div>
+    </div>
+  </div>
+
+  <div id="content">
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="metrics-row">
+        <div class="metric-card blue"><div class="metric-label">Products Tracked</div><div class="metric-value blue" id="m-total">0</div><div class="metric-sub">across all platforms</div></div>
+        <div class="metric-card green"><div class="metric-label">Total Savings</div><div class="metric-value green" id="m-savings">₹0</div><div class="metric-sub">from highest tracked price</div></div>
+        <div class="metric-card amber"><div class="metric-label">Alerts Active</div><div class="metric-value amber" id="m-alerts">0</div><div class="metric-sub">waiting for target price</div></div>
+        <div class="metric-card red"><div class="metric-label">Price Drops</div><div class="metric-value red" id="m-drops">0</div><div class="metric-sub">vs. when added</div></div>
+      </div>
+      <div class="filter-bar">
+        <select id="filter-platform" onchange="applyFilters()"><option value="all">All Platforms</option><option value="amazon">Amazon</option><option value="flipkart">Flipkart</option></select>
+        <select id="filter-category" onchange="applyFilters()"><option value="all">All Categories</option><option value="Electronics">Electronics</option><option value="Fashion">Fashion</option><option value="Home">Home & Kitchen</option><option value="Books">Books</option><option value="Sports">Sports</option><option value="Beauty">Beauty</option><option value="Other">Other</option></select>
+        <select id="filter-sort" onchange="applyFilters()"><option value="added">Recently Added</option><option value="name">Name A-Z</option><option value="price-asc">Price: Low→High</option><option value="price-desc">Price: High→Low</option><option value="savings">Most Savings</option><option value="deal">Best Deal Score</option></select>
+        <select id="filter-status" onchange="applyFilters()"><option value="all">All Status</option><option value="alert-on">Alert On</option><option value="alert-triggered">Alert Triggered</option><option value="favorites">Favorites</option></select>
+        <span class="sort-label" id="product-count-label">0 products</span>
+        <div class="view-toggle">
+          <button class="active" id="grid-toggle" onclick="setListView(false)">⊞</button>
+          <button id="list-toggle" onclick="setListView(true)">≡</button>
+        </div>
+      </div>
+      <div class="product-grid" id="product-grid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="icon">🦅</div><h3>No products yet</h3><p>Paste an Amazon or Flipkart URL to start tracking real prices.</p><button class="btn btn-primary" onclick="openAddModal()">+ Add Your First Product</button></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="view" id="view-alerts">
+      <div class="section-head"><div><h2>Price Alerts <span class="count-badge" id="alerts-count-badge">0</span></h2><p>Notified when price hits your target</p></div><button class="btn btn-ghost btn-sm" onclick="openAddModal()">+ Add Product</button></div>
+      <div class="alerts-list" id="alerts-list"></div>
+    </div>
+
+    <!-- COMPARE -->
+    <div class="view" id="view-compare">
+      <div class="section-head"><div><h2>Compare Products</h2><p>Select 2–3 products to compare</p></div><button class="btn btn-ghost btn-sm" onclick="clearCompare()">Clear</button></div>
+      <div class="compare-selector" id="compare-selector"></div>
+      <div id="compare-result"></div>
+    </div>
+
+    <!-- WISHLIST -->
+    <div class="view" id="view-wishlist">
+      <div class="section-head"><div><h2>Wishlist <span class="count-badge" id="wishlist-count-badge">0</span></h2><p>Your starred products</p></div></div>
+      <div class="product-grid" id="wishlist-grid"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="view" id="view-analytics">
+      <div class="section-head"><div><h2>Analytics</h2><p>Price trends and savings overview</p></div></div>
+      <div class="analytics-grid">
+        <div class="analytics-card"><h3>Best Deals Right Now</h3><div id="best-deals-list"></div></div>
+        <div class="analytics-card"><h3>Platform Distribution</h3><div class="platform-split" id="platform-split"></div><div style="position:relative;height:180px"><canvas id="platform-chart"></canvas></div></div>
+        <div class="analytics-card"><h3>Category Breakdown</h3><div style="position:relative;height:200px"><canvas id="category-chart"></canvas></div></div>
+        <div class="analytics-card"><h3>Price Change Overview</h3><div style="position:relative;height:200px"><canvas id="change-chart"></canvas></div></div>
+      </div>
+      <div class="chart-wrap"><h3>Portfolio Value (All Products Combined)</h3><div style="position:relative;height:240px"><canvas id="portfolio-chart"></canvas></div></div>
+    </div>
+
+    <!-- HISTORY ALL -->
+    <div class="view" id="view-history-all">
+      <div class="section-head"><div><h2>Price History</h2><p>Real historical data from scraping</p></div></div>
+      <div id="history-all-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-head"><h3>Notifications</h3><button class="clear-notif" onclick="clearNotifs()">Clear all</button></div>
+  <div class="notif-list" id="notif-list"><div class="notif-empty">No notifications yet</div></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ADD PRODUCT MODAL -->
+<div class="modal-overlay" id="modal-add-overlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Track a Product</h2><button class="close-btn" onclick="closeModal('add')">✕</button></div>
+    <div class="modal-body">
+
+      <!-- STEP 1: URL input (always visible) -->
+      <div id="step-url">
+        <div style="text-align:center;padding:8px 0 20px">
+          <div style="font-size:36px;margin-bottom:8px">🦅</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">Paste any product URL</div>
+          <div style="font-size:12.5px;color:var(--t3)">Supports Amazon.in and Flipkart.com</div>
+        </div>
+        <input class="form-input" id="add-url" type="url"
+          placeholder="https://www.amazon.in/... or https://www.flipkart.com/..."
+          oninput="onURLInput(this.value)"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();startTracking()}"
+          onpaste="setTimeout(startTracking,300)"
+          style="font-size:13px;padding:12px 14px;margin-bottom:10px">
+        <div id="platform-detect-badge" class="platform-detect unknown" style="display:none;margin-bottom:12px"></div>
+
+        <!-- Scraping status shown inline -->
+        <div id="track-status" style="display:none;border-radius:var(--r1);padding:14px 16px;margin-bottom:12px;font-size:13px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="track-spinner" class="mini-spinner" style="display:none"></div>
+            <div id="track-status-text"></div>
+          </div>
+          <div id="track-progress-bar" style="height:3px;background:var(--bg3);border-radius:2px;margin-top:10px;display:none">
+            <div id="track-progress-fill" style="height:100%;background:var(--green);border-radius:2px;width:0%;transition:width 0.3s"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Optional alert price (shown after successful fetch) -->
+      <div id="step-alert" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div id="fetched-preview" style="flex:1">
+            <div id="fetched-name" style="font-size:14px;font-weight:700;margin-bottom:4px"></div>
+            <div style="display:flex;gap:12px;align-items:center">
+              <span id="fetched-price" style="font-size:20px;font-weight:800;font-family:var(--f2);color:var(--green)"></span>
+              <span id="fetched-mrp" style="font-size:13px;color:var(--t3);text-decoration:line-through;display:none"></span>
+            </div>
+          </div>
+          <span id="fetched-platform-badge" class="platform-badge"></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="flex:1">
+            <label class="form-label">🔔 Alert me when price drops to (₹) — optional</label>
+            <input class="form-input" id="add-target" type="number" placeholder="e.g. 59999" min="0"
+              onkeydown="if(event.key==='Enter') finalizeTracking()">
+          </div>
+          <div style="flex:1">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="add-category">
+              <option>Electronics</option><option>Fashion</option><option>Home</option>
+              <option>Books</option><option>Sports</option><option>Beauty</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('add')">Cancel</button>
+      <button class="btn btn-primary" id="track-btn" onclick="startTracking()">🔍 Fetch & Track</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="modal-detail-overlay">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h2 id="detail-title">Product Details</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="visitProduct()">🔗 Visit</button>
+        <button class="close-btn" onclick="closeModal('detail')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrentProduct()">Delete</button>
+      <button class="btn btn-ghost btn-sm" onclick="addToCompare(state.detailId)">Add to Compare</button>
+      <button class="btn btn-amber btn-sm" onclick="generateDemoHistory()" id="demo-history-btn" title="Generate 6 months of realistic price history for demo purposes">📈 Generate Demo History</button>
+      <button class="btn btn-primary btn-sm" onclick="saveProductEdits()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== SESSION + API =====================
+const SESSION_ID = (() => {
+  let id = localStorage.getItem('ph_session_v3');
+  if (!id) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    id = [...arr].map(b => b.toString(16).padStart(2,'0')).join('');
+    id = id.slice(0,8)+'-'+id.slice(8,12)+'-4'+id.slice(13,16)+'-'+id.slice(16,20)+'-'+id.slice(20);
+    localStorage.setItem('ph_session_v3', id);
+  }
+  return id;
+})();
+
+const H = () => ({ 'Content-Type': 'application/json', 'X-Session-ID': SESSION_ID });
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { ...H(), ...(opts.headers||{}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ===================== STATE =====================
+let state = {
+  products: [],
+  view: 'dashboard',
+  filter: { platform:'all', category:'all', search:'', status:'all' },
+  sort: 'added',
+  notifications: JSON.parse(localStorage.getItem('ph_notifs')||'[]'),
+  compareList: JSON.parse(localStorage.getItem('ph_compare')||'[]'),
+  detailId: null,
+  listView: false,
+  addTags: [],
+  detailChart: null,
+  compareChart: null,
+  platformChart: null,
+  categoryChart: null,
+  changeChart: null,
+  portfolioChart: null,
+};
+
+// ===================== INIT =====================
+async function init() {
+  showGlobalLoading('Loading your products…');
+  try {
+    state.products = await api('/api/products');
+    renderAll();
+    if (state.products.length === 0) showToast('Add your first product to start tracking real prices!', 'blue');
+  } catch (err) {
+    showToast('Could not load products: ' + err.message, 'red');
+    state.products = [];
+    renderAll();
+  } finally {
+    hideGlobalLoading();
+  }
+}
+
+// ===================== REFRESH (REAL SCRAPING) =====================
+async function doRefresh() {
+  if (state.products.length === 0) { showToast('Add some products first!', 'amber'); return; }
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '⟳ Scraping…';
+  btn.disabled = true;
+  showGlobalLoading(`Scraping prices for ${state.products.length} product${state.products.length>1?'s':''}…\nThis may take 20–60 seconds.`);
+  try {
+    const result = await api('/api/refresh', { method: 'POST' });
+    state.products = await api('/api/products');
+    renderAll();
+    const alertMsg = result.alertsTriggered > 0 ? ` · 🎉 ${result.alertsTriggered} alert(s) triggered!` : '';
+    showToast(`✅ Updated ${result.updated}/${result.total} products${alertMsg}`, result.alertsTriggered > 0 ? 'green' : 'blue');
+    if (result.alertsTriggered > 0) {
+      addNotif({ type:'alert', text:`${result.alertsTriggered} product(s) hit target price!` });
+    }
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('sf-updated').textContent = 'Updated ' + now;
+    result.results.filter(r => !r.success).forEach(r => addNotif({ type:'warn', text:`Could not fetch: ${r.name} — ${r.reason}` }));
+  } catch (err) {
+    showToast('Refresh failed: ' + err.message, 'red');
+  } finally {
+    btn.textContent = '🔄 Refresh';
+    btn.disabled = false;
+    hideGlobalLoading();
+  }
+}
+
+// ===================== RENDER =====================
+function renderAll() {
+  updateMetrics();
+  renderDashboard();
+  updateSidebar();
+  updateAlertsBadge();
+  updateNotifDot();
+  const v = state.view;
+  if (v === 'alerts') renderAlertsView();
+  else if (v === 'compare') renderCompareView();
+  else if (v === 'wishlist') renderWishlistView();
+  else if (v === 'analytics') renderAnalytics();
+  else if (v === 'history-all') renderHistoryAll();
+}
+
+function updateMetrics() {
+  const p = state.products;
+  const savings = p.reduce((s,x) => s + Math.max(0, x.highestPrice - x.currentPrice), 0);
+  const active = p.filter(x => x.alertEnabled && !x.alertTriggered).length;
+  const drops = p.filter(x => x.priceHistory.length > 1 && x.currentPrice < x.priceHistory[0].price).length;
+  document.getElementById('m-total').textContent = p.length;
+  document.getElementById('m-savings').textContent = fmt(savings);
+  document.getElementById('m-alerts').textContent = active;
+  document.getElementById('m-drops').textContent = drops;
+}
+
+function updateSidebar() {
+  const p = state.products;
+  const savings = p.reduce((s,x) => s + Math.max(0, x.highestPrice - x.currentPrice), 0);
+  document.getElementById('sf-products').textContent = p.length;
+  document.getElementById('sf-alerts').textContent = p.filter(x => x.alertEnabled).length;
+  document.getElementById('sf-savings').textContent = fmt(savings);
+}
+
+function updateAlertsBadge() {
+  const t = state.products.filter(p => p.alertTriggered).length;
+  const b = document.getElementById('alerts-badge');
+  b.textContent = t; b.style.display = t > 0 ? '' : 'none';
+  const cb = document.getElementById('alerts-count-badge');
+  if (cb) cb.textContent = state.products.filter(p => p.alertEnabled).length;
+}
+
+// ===================== DASHBOARD =====================
+function getFiltered() {
+  let prods = [...state.products];
+  const f = state.filter;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    prods = prods.filter(p => p.name.toLowerCase().includes(q) || p.tags.some(t => t.toLowerCase().includes(q)) || p.category.toLowerCase().includes(q));
+  }
+  if (f.platform !== 'all') prods = prods.filter(p => p.platform === f.platform);
+  if (f.category !== 'all') prods = prods.filter(p => p.category === f.category);
+  if (f.status === 'alert-on') prods = prods.filter(p => p.alertEnabled);
+  else if (f.status === 'alert-triggered') prods = prods.filter(p => p.alertTriggered);
+  else if (f.status === 'favorites') prods = prods.filter(p => p.favorite);
+  const s = state.sort;
+  if (s === 'name') prods.sort((a,b) => a.name.localeCompare(b.name));
+  else if (s === 'price-asc') prods.sort((a,b) => a.currentPrice - b.currentPrice);
+  else if (s === 'price-desc') prods.sort((a,b) => b.currentPrice - a.currentPrice);
+  else if (s === 'savings') prods.sort((a,b) => (b.highestPrice - b.currentPrice) - (a.highestPrice - a.currentPrice));
+  else if (s === 'deal') prods.sort((a,b) => dealScore(b) - dealScore(a));
+  else prods.sort((a,b) => b.addedAt - a.addedAt);
+  return prods;
+}
+
+function renderDashboard() {
+  const prods = getFiltered();
+  const grid = document.getElementById('product-grid');
+  document.getElementById('product-count-label').textContent = prods.length + ' product' + (prods.length!==1?'s':'');
+  if (prods.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${state.filter.search?'🔍':'🦅'}</div><h3>${state.filter.search?'No products found':'No products yet'}</h3><p>${state.filter.search?'Try a different search term.':'Paste any Amazon or Flipkart URL to start tracking real prices.'}</p>${!state.filter.search?'<button class="btn btn-primary" onclick="openAddModal()">+ Add Product</button>':''}</div>`;
+    return;
+  }
+  grid.innerHTML = prods.map(p => productCardHTML(p)).join('');
+  prods.forEach(p => drawSparkline('spark_'+p.id, p.priceHistory));
+}
+
+function productCardHTML(p) {
+  const hist = p.priceHistory;
+  const first = hist.length > 1 ? hist[0].price : p.currentPrice;
+  const change = first ? ((p.currentPrice - first) / first) * 100 : 0;
+  const changeClass = change < -0.5 ? 'down' : change > 0.5 ? 'up' : 'flat';
+  const changeIcon = change < -0.5 ? '▼' : change > 0.5 ? '▲' : '—';
+  const isATL = hist.length > 1 && p.currentPrice <= p.lowestPrice;
+  const score = dealScore(p);
+  const scoreColor = score > 60 ? '#00d4a1' : score > 30 ? '#f59e0b' : '#ff5c5c';
+  const savings = p.highestPrice - p.currentPrice;
+  const hasTarget = p.targetPrice && p.targetPrice > 0;
+  const targetPct = hasTarget ? Math.min(100, Math.round(((p.highestPrice - p.currentPrice) / Math.max(1, p.highestPrice - p.targetPrice)) * 100)) : 0;
+  const dataPoints = hist.length;
+  return `<div class="product-card ${p.alertTriggered?'alert-triggered':''}" id="card_${p.id}">
+    <div class="card-header">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span class="platform-badge ${p.platform}">${p.platform==='amazon'?'🟠 Amazon':'🔵 Flipkart'}</span>
+          ${dataPoints > 1 ? `<span style="font-size:10px;color:var(--t3);font-family:var(--f2)">${dataPoints} data pts</span>` : '<span style="font-size:10px;color:var(--amber)">1 data pt — refresh to build history</span>'}
+        </div>
+        <div class="card-title" title="${p.name}" onclick="openDetail('${p.id}')">${p.name}</div>
+        ${p.tags && p.tags.length ? `<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${p.tags.map(t=>`<span class="card-cat">${t}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="card-actions-top">
+        <button class="icon-btn fav ${p.favorite?'active':''}" onclick="toggleFav('${p.id}')" title="Wishlist">⭐</button>
+        <button class="icon-btn ${p.alertEnabled?'alert-on':''}" onclick="toggleAlert('${p.id}')" title="Toggle alert">🔔</button>
+        <button class="icon-btn" onclick="openDetail('${p.id}')">⋯</button>
+      </div>
+    </div>
+    <div class="card-price-section" onclick="openDetail('${p.id}')">
+      <div>
+        <span class="price-main">${fmt(p.currentPrice)}</span>
+        ${hist.length > 1 ? `<span class="price-change ${changeClass}">${changeIcon} ${Math.abs(change).toFixed(1)}%</span>` : '<span class="price-change flat" style="font-size:10px">tracking…</span>'}
+      </div>
+      ${isATL ? '<div class="atl-badge">🏆 All-Time Low!</div>' : ''}
+      <div class="price-meta">
+        <div class="price-meta-item">High <span>${fmt(p.highestPrice)}</span></div>
+        <div class="price-meta-item">Low <span>${fmt(p.lowestPrice)}</span></div>
+        <div class="price-meta-item">Avg <span>${fmt(p.avgPrice)}</span></div>
+      </div>
+      ${savings > 100 ? `<div class="savings-text">↓ ${fmt(savings)} below peak</div>` : ''}
+      ${hasTarget ? `<div class="target-progress"><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);font-family:var(--f2)"><span>Target: ${fmt(p.targetPrice)}</span><span>${targetPct}%</span></div><div class="target-bar"><div class="target-fill" style="width:${targetPct}%"></div></div></div>` : ''}
+    </div>
+    <div class="sparkline-section"><canvas id="spark_${p.id}"></canvas></div>
+    <div class="card-footer">
+      <div class="deal-score"><span>${score}</span><div class="deal-bar"><div class="deal-fill" style="width:${score}%;background:${scoreColor}"></div></div><span style="font-size:10px">deal score</span></div>
+      <span class="card-cat">${p.category}</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="window.open('${p.url}','_blank')">↗</button>
+    </div>
+  </div>`;
+}
+
+function dealScore(p) {
+  const fromHigh = p.highestPrice > 0 ? ((p.highestPrice - p.currentPrice) / p.highestPrice) * 100 : 0;
+  return Math.min(100, Math.round(fromHigh * 1.5));
+}
+
+// ===================== SPARKLINE =====================
+function drawSparkline(cid, history) {
+  const canvas = document.getElementById(cid);
+  if (!canvas || history.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth || canvas.parentElement.offsetWidth || 240;
+  const h = canvas.offsetHeight || 52;
+  canvas.width = w * dpr; canvas.height = h * dpr; ctx.scale(dpr, dpr);
+  const prices = history.map(h => h.price);
+  const min = Math.min(...prices); const max = Math.max(...prices); const range = max - min || 1;
+  const pad = {t:4,b:4,l:2,r:2};
+  const fw = w-pad.l-pad.r; const fh = h-pad.t-pad.b;
+  const x = i => pad.l + (i/(prices.length-1))*fw;
+  const y = v => pad.t + (1-(v-min)/range)*fh;
+  const isDown = prices[prices.length-1] <= prices[0];
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, isDown?'rgba(0,212,161,0.25)':'rgba(255,92,92,0.2)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath();
+  prices.forEach((p,i) => i===0?ctx.moveTo(x(i),y(p)):ctx.lineTo(x(i),y(p)));
+  ctx.lineTo(x(prices.length-1),h); ctx.lineTo(x(0),h); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath();
+  prices.forEach((p,i) => i===0?ctx.moveTo(x(i),y(p)):ctx.lineTo(x(i),y(p)));
+  ctx.strokeStyle = isDown?'#00d4a1':'#ff5c5c'; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.stroke();
+  const lx=x(prices.length-1), ly=y(prices[prices.length-1]);
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2); ctx.fillStyle=isDown?'#00d4a1':'#ff5c5c'; ctx.fill();
+}
+
+// ===================== ADD PRODUCT (ONE-CLICK) =====================
+let _pendingURL = '';
+let addTags = [];
+let _fetchedData = null;
+
+function openAddModal() {
+  _fetchedData = null;
+  document.getElementById('add-url').value = '';
+  document.getElementById('add-target').value = '';
+  document.getElementById('platform-detect-badge').style.display = 'none';
+  document.getElementById('track-status').style.display = 'none';
+  document.getElementById('step-alert').style.display = 'none';
+  document.getElementById('track-btn').textContent = '🔍 Fetch & Track';
+  document.getElementById('track-btn').onclick = startTracking;
+  document.getElementById('modal-add-overlay').classList.add('show');
+  if (_pendingURL) {
+    document.getElementById('add-url').value = _pendingURL;
+    onURLInput(_pendingURL);
+    _pendingURL = '';
+    setTimeout(startTracking, 300);
+  } else {
+    setTimeout(() => document.getElementById('add-url').focus(), 100);
+  }
+}
+
+function onURLInput(val) {
+  const badge = document.getElementById('platform-detect-badge');
+  _fetchedData = null;
+  document.getElementById('step-alert').style.display = 'none';
+  document.getElementById('track-btn').textContent = '🔍 Fetch & Track';
+  document.getElementById('track-btn').onclick = startTracking;
+  if (!val) { badge.style.display = 'none'; return; }
+  const plat = detectPlatform(val);
+  badge.style.display = 'inline-flex';
+  badge.className = 'platform-detect ' + (plat || 'unknown');
+  badge.textContent = plat === 'amazon' ? '🟠 Amazon detected' : plat === 'flipkart' ? '🔵 Flipkart detected' : '⬤ Unsupported URL';
+}
+
+function setTrackStatus(type, msg, showSpinner = false, progress = null) {
+  const box = document.getElementById('track-status');
+  const text = document.getElementById('track-status-text');
+  const spinner = document.getElementById('track-spinner');
+  const bar = document.getElementById('track-progress-bar');
+  const fill = document.getElementById('track-progress-fill');
+  box.style.display = 'block';
+  box.style.background = type === 'loading' ? 'var(--blue-d)' : type === 'success' ? 'var(--green-d)' : 'var(--red-d)';
+  box.style.color = type === 'loading' ? 'var(--blue)' : type === 'success' ? 'var(--green)' : 'var(--red)';
+  text.textContent = msg;
+  spinner.style.display = showSpinner ? 'block' : 'none';
+  spinner.style.borderTopColor = type === 'loading' ? 'var(--blue)' : 'var(--green)';
+  if (progress !== null) { bar.style.display = 'block'; fill.style.width = progress + '%'; }
+  else bar.style.display = 'none';
+}
+
+async function startTracking() {
+  const url = document.getElementById('add-url').value.trim();
+  if (!url) { showToast('Paste a URL first', 'red'); return; }
+  const plat = detectPlatform(url);
+  if (!plat) { showToast('Only Amazon.in and Flipkart.com are supported', 'red'); return; }
+
+  const btn = document.getElementById('track-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Fetching…';
+  setTrackStatus('loading', `Connecting to ${plat === 'amazon' ? 'Amazon' : 'Flipkart'}…`, true, 20);
+
+  try {
+    setTimeout(() => setTrackStatus('loading', 'Scraping product page…', true, 50), 1500);
+    setTimeout(() => setTrackStatus('loading', 'Extracting price and name…', true, 75), 3500);
+
+    const data = await api('/api/scrape', { method: 'POST', body: JSON.stringify({ url }) });
+
+    if (!data.price) {
+      setTrackStatus('error', '⚠️ Could not find price. The product may be out of stock or requires a ScraperAPI key.');
+      btn.disabled = false; btn.textContent = '🔍 Fetch & Track';
+      return;
+    }
+
+    _fetchedData = { ...data, url, platform: plat };
+    setTrackStatus('success', `✅ Found! Saving to your dashboard…`, false, 100);
+
+    // Save immediately to DB
+    await api('/api/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: data.name || urlToName(url, plat),
+        url,
+        platform: plat,
+        category: document.getElementById('add-category').value,
+        currentPrice: data.price,
+        originalPrice: data.originalPrice || null,
+        targetPrice: null,
+        alertEnabled: false,
+        notes: '',
+        tags: [],
+      })
+    });
+
+    state.products = await api('/api/products');
+    renderAll();
+
+    // Show the optional alert step
+    document.getElementById('fetched-name').textContent = (data.name || urlToName(url, plat)).slice(0, 60);
+    document.getElementById('fetched-price').textContent = fmt(data.price);
+    const mrpEl = document.getElementById('fetched-mrp');
+    if (data.originalPrice) { mrpEl.textContent = fmt(data.originalPrice); mrpEl.style.display = 'inline'; }
+    else mrpEl.style.display = 'none';
+    const pb = document.getElementById('fetched-platform-badge');
+    pb.className = 'platform-badge ' + plat;
+    pb.textContent = plat === 'amazon' ? '🟠 Amazon' : '🔵 Flipkart';
+    document.getElementById('step-alert').style.display = 'block';
+    setTrackStatus('success', `✅ ${fmt(data.price)} — Added to dashboard! Set an alert price below (optional).`, false, 100);
+
+    btn.disabled = false;
+    btn.textContent = '✅ Done — Close';
+    btn.onclick = () => closeModal('add');
+    showToast('🎉 Product added! Price history will build daily.', 'green');
+    addNotif({ type: 'add', text: 'Added: ' + (data.name || url).slice(0, 40) });
+
+  } catch (err) {
+    setTrackStatus('error', '❌ ' + err.message);
+    btn.disabled = false; btn.textContent = '🔍 Fetch & Track';
+  }
+}
+
+async function finalizeTracking() {
+  if (!_fetchedData) return;
+  const target = parseFloat(document.getElementById('add-target').value);
+  if (!isNaN(target) && target > 0) {
+    // Update the last added product with alert
+    const latest = state.products[0];
+    if (latest) {
+      await api('/api/products', {
+        method: 'PUT',
+        body: JSON.stringify({ id: latest.id, targetPrice: target, alertEnabled: true })
+      });
+      state.products = await api('/api/products');
+      renderAll();
+      showToast(`🔔 Alert set for ${fmt(target)}!`, 'green');
+    }
+  }
+  closeModal('add');
+}
+
+function urlToName(url, platform) {
+  try {
+    const path = new URL(url).pathname;
+    const parts = path.split('/').filter(Boolean);
+    const slug = parts.find(p => p.length > 10 && !p.startsWith('dp') && !p.startsWith('p')) || parts[0] || '';
+    return slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).slice(0, 60) || (platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product');
+  } catch { return platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product'; }
+}
+
+function handleTagInput(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(',', '');
+    if (val && !addTags.includes(val)) { addTags.push(val); renderTagsInput(); }
+    e.target.value = '';
+  }
+}
+
+function renderTagsInput() {
+  const wrap = document.getElementById('tag-input-wrap');
+  if (!wrap) return;
+  const input = document.getElementById('tag-input');
+  wrap.innerHTML = '';
+  addTags.forEach((t, i) => {
+    const tag = document.createElement('div'); tag.className = 'tag';
+    tag.innerHTML = `${t}<span class="tag-remove" onclick="removeTag(${i})">✕</span>`;
+    wrap.appendChild(tag);
+  });
+  wrap.appendChild(input);
+}
+
+function removeTag(i) { addTags.splice(i, 1); renderTagsInput(); }
+
+// ===================== DETAIL MODAL =====================
+function openDetail(id) {
+  state.detailId = id;
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('detail-title').textContent = p.name.slice(0,50);
+  const hist = p.priceHistory;
+  const savings = p.highestPrice - p.currentPrice;
+  const savingsPct = p.highestPrice > 0 ? ((savings/p.highestPrice)*100).toFixed(1) : 0;
+  document.getElementById('detail-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span class="platform-badge ${p.platform}">${p.platform==='amazon'?'🟠 Amazon':'🔵 Flipkart'}</span>
+      <span class="card-cat">${p.category}</span>
+      ${p.tags.map(t=>`<span class="card-cat">${t}</span>`).join('')}
+      <span class="real-badge">🟢 Real Data</span>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+      <div class="detail-price">${fmt(p.currentPrice)}</div>
+      ${hist.length > 1 ? `<span class="price-change ${p.currentPrice <= p.lowestPrice ? 'down' : 'flat'}">${p.currentPrice <= p.lowestPrice ? '🏆 ATL' : 'Live'}</span>` : '<span style="font-size:12px;color:var(--amber)">Only 1 data point — refresh to build history</span>'}
+    </div>
+    ${p.originalPrice ? `<div style="font-size:13px;color:var(--t3);margin-bottom:12px">MRP: <s>${fmt(p.originalPrice)}</s> · You save: <span style="color:var(--green)">${fmt(p.originalPrice - p.currentPrice)}</span></div>` : ''}
+    <div class="detail-stats">
+      <div class="detail-stat"><div class="detail-stat-label">Highest</div><div class="detail-stat-value red">${fmt(p.highestPrice)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Lowest</div><div class="detail-stat-value green">${fmt(p.lowestPrice)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Average</div><div class="detail-stat-value">${fmt(p.avgPrice)}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">Data Points</div><div class="detail-stat-value amber">${hist.length}</div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchDTab('chart',this)">📈 Chart</button>
+      <button class="tab-btn" onclick="switchDTab('history',this)">📋 History</button>
+      <button class="tab-btn" onclick="switchDTab('alert',this)">🔔 Alert</button>
+      <button class="tab-btn" onclick="switchDTab('edit',this)">✏️ Edit</button>
+    </div>
+    <div class="tab-panel active" id="dtab-chart">
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="btn btn-ghost btn-sm" onclick="setDRange(30,this)">1M</button>
+        <button class="btn btn-ghost btn-sm" onclick="setDRange(90,this)">3M</button>
+        <button class="btn btn-ghost btn-sm" style="background:var(--bg3)" onclick="setDRange(999,this)">All</button>
+      </div>
+      <div style="position:relative;height:200px"><canvas id="detail-chart-canvas"></canvas></div>
+    </div>
+    <div class="tab-panel" id="dtab-history">
+      ${hist.length < 2 ? '<div style="color:var(--t3);font-size:13px;padding:20px 0">Refresh prices to build history. One new data point is added each day you refresh.</div>' : ''}
+      <table class="history-table">
+        <thead><tr><th>Date</th><th>Price</th><th>Change</th></tr></thead>
+        <tbody>${hist.slice().reverse().slice(0,60).map((h,i,arr) => {
+          const prev = arr[i+1];
+          const chg = prev ? ((h.price - prev.price)/prev.price*100) : 0;
+          return `<tr><td>${formatDate(h.date)}</td><td>${fmt(h.price)}</td><td class="${chg<0?'change-dn':chg>0?'change-up':''}">${prev?(chg<0?'▼':'▲')+' '+Math.abs(chg).toFixed(1)+'%':'First entry'}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div class="tab-panel" id="dtab-alert">
+      <div style="margin-bottom:18px">
+        <div class="toggle-switch" onclick="toggleAlertDetail()">
+          <div class="toggle ${p.alertEnabled?'on':''}" id="dtoggle"></div>
+          <span style="font-size:14px;font-weight:600">${p.alertEnabled?'Alert Enabled':'Alert Disabled'}</span>
+          ${p.alertTriggered?'<span class="alert-badge triggered" style="margin-left:8px">🎉 Target Reached!</span>':''}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alert when price drops to (₹)</label>
+        <input class="form-input" id="detail-target" type="number" value="${p.targetPrice||''}" placeholder="e.g. 89999">
+        <div class="form-hint">You'll be alerted when the live price drops to or below this amount</div>
+      </div>
+      ${p.targetPrice ? `<div style="margin-top:12px;font-size:12.5px;color:var(--t2)">
+        Need <strong style="color:var(--green)">${fmt(Math.max(0, p.currentPrice - p.targetPrice))}</strong> more drop
+        (${((Math.max(0, p.currentPrice-p.targetPrice)/p.currentPrice)*100).toFixed(1)}%) to hit target
+      </div>` : ''}
+    </div>
+    <div class="tab-panel" id="dtab-edit">
+      <div class="form-group"><label class="form-label">Product Name</label><input class="form-input" id="edit-name" value="${p.name}"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Current Price (₹)</label><input class="form-input" id="edit-price" type="number" value="${p.currentPrice}"></div>
+        <div class="form-group"><label class="form-label">MRP (₹)</label><input class="form-input" id="edit-mrp" type="number" value="${p.originalPrice||''}"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Category</label>
+        <select class="form-select" id="edit-category">${['Electronics','Fashion','Home','Books','Sports','Beauty','Other'].map(c=>`<option ${p.category===c?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="edit-notes">${p.notes||''}</textarea></div>
+    </div>`;
+  document.getElementById('modal-detail-overlay').classList.add('show');
+  setTimeout(() => renderDetailChart(id, 999), 50);
+}
+
+function switchDTab(name, btn) {
+  document.querySelectorAll('#detail-body .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#detail-body .tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dtab-'+name).classList.add('active');
+  if (name==='chart') setTimeout(() => renderDetailChart(state.detailId, 999), 10);
+}
+
+function renderDetailChart(id, days) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  const canvas = document.getElementById('detail-chart-canvas');
+  if (!canvas) return;
+  if (state.detailChart) { state.detailChart.destroy(); state.detailChart=null; }
+  const hist = days < 999 ? p.priceHistory.slice(-days) : p.priceHistory;
+  if (hist.length < 1) return;
+  const labels = hist.map(h => h.date.slice(5));
+  const prices = hist.map(h => h.price);
+  const avgLine = prices.map(() => p.avgPrice);
+  const targetLine = p.targetPrice ? prices.map(() => p.targetPrice) : null;
+  state.detailChart = new Chart(canvas, {
+    type:'line',
+    data:{ labels, datasets:[
+      {label:'Price',data:prices,borderColor:'#4f9eff',backgroundColor:'rgba(79,158,255,0.08)',fill:true,tension:0.3,pointRadius:prices.length>30?1:3,pointHoverRadius:5,borderWidth:2},
+      {label:'Avg',data:avgLine,borderColor:'#f59e0b',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false},
+      ...(targetLine?[{label:'Target',data:targetLine,borderColor:'#00d4a1',borderDash:[6,3],borderWidth:1.5,pointRadius:0,fill:false}]:[]),
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:'#94a3b8',font:{size:11},boxWidth:20,padding:14}},
+        tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},
+      scales:{
+        x:{ticks:{color:'#475569',font:{size:11},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#475569',font:{size:11},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'K':v)},grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
+  });
+}
+
+function setDRange(days, btn) {
+  document.querySelectorAll('#dtab-chart .btn').forEach(b => b.style.background='');
+  btn.style.background = 'var(--bg3)';
+  renderDetailChart(state.detailId, days);
+}
+
+async function toggleAlertDetail() {
+  const p = state.products.find(x => x.id === state.detailId);
+  if (!p) return;
+  p.alertEnabled = !p.alertEnabled;
+  const tog = document.getElementById('dtoggle');
+  if (tog) tog.classList.toggle('on', p.alertEnabled);
+  await api('/api/products', { method:'PUT', body: JSON.stringify({ id: p.id, alertEnabled: p.alertEnabled }) });
+  updateAlertsBadge(); updateSidebar();
+  showToast(p.alertEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
+}
+
+async function saveProductEdits() {
+  const p = state.products.find(x => x.id === state.detailId);
+  if (!p) return;
+  const name = document.getElementById('edit-name')?.value.trim();
+  const price = parseFloat(document.getElementById('edit-price')?.value);
+  const mrp = parseFloat(document.getElementById('edit-mrp')?.value);
+  const cat = document.getElementById('edit-category')?.value;
+  const notes = document.getElementById('edit-notes')?.value;
+  const target = parseFloat(document.getElementById('detail-target')?.value);
+  const updates = { id: p.id };
+  if (name) updates.name = name;
+  if (!isNaN(price) && price > 0) updates.currentPrice = price;
+  if (!isNaN(mrp)) updates.originalPrice = mrp;
+  if (cat) updates.category = cat;
+  if (notes !== undefined) updates.notes = notes;
+  if (!isNaN(target) && target > 0) { updates.targetPrice = target; updates.alertEnabled = true; }
+  try {
+    await api('/api/products', { method:'PUT', body: JSON.stringify(updates) });
+    state.products = await api('/api/products');
+    closeModal('detail');
+    renderAll();
+    showToast('✅ Product updated!', 'green');
+  } catch (err) {
+    showToast('Update failed: ' + err.message, 'red');
+  }
+}
+
+async function deleteCurrentProduct() {
+  if (!confirm('Delete this product and all its price history?')) return;
+  try {
+    await api('/api/products', { method:'DELETE', body: JSON.stringify({ id: state.detailId }) });
+    state.products = state.products.filter(p => p.id !== state.detailId);
+    state.compareList = state.compareList.filter(id => id !== state.detailId);
+    closeModal('detail');
+    renderAll();
+    showToast('🗑️ Product deleted', 'red');
+  } catch (err) {
+    showToast('Delete failed: ' + err.message, 'red');
+  }
+}
+
+function visitProduct() {
+  const p = state.products.find(x => x.id === state.detailId);
+  if (p) window.open(p.url, '_blank');
+}
+
+// ===================== TOGGLE FAV / ALERT =====================
+async function toggleFav(id) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  p.favorite = !p.favorite;
+  renderDashboard(); renderWishlistView();
+  await api('/api/products', { method:'PUT', body: JSON.stringify({ id, favorite: p.favorite }) });
+  showToast(p.favorite ? '⭐ Added to wishlist' : '☆ Removed from wishlist', 'amber');
+}
+
+async function toggleAlert(id) {
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  p.alertEnabled = !p.alertEnabled;
+  renderDashboard(); updateAlertsBadge();
+  await api('/api/products', { method:'PUT', body: JSON.stringify({ id, alertEnabled: p.alertEnabled }) });
+  showToast(p.alertEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
+}
+
+// ===================== ALERTS VIEW =====================
+function renderAlertsView() {
+  const list = document.getElementById('alerts-list');
+  const ap = state.products.filter(p => p.alertEnabled || p.targetPrice);
+  if (!ap.length) { list.innerHTML = `<div class="empty-state"><div class="icon">🔔</div><h3>No alerts set</h3><p>Open any product → Alert tab → set a target price.</p></div>`; return; }
+  list.innerHTML = ap.map(p => {
+    const pct = p.targetPrice && p.currentPrice > p.targetPrice ? ((p.currentPrice - p.targetPrice)/p.currentPrice*100).toFixed(1) : null;
+    const st = p.alertTriggered ? 'triggered' : p.alertEnabled ? 'active' : 'off';
+    return `<div class="alert-item ${p.alertTriggered?'triggered':''}">
+      <div style="font-size:24px">${p.platform==='amazon'?'🟠':'🔵'}</div>
+      <div class="alert-info">
+        <div class="alert-name">${p.name.slice(0,60)}</div>
+        <div class="alert-prices">Current: <span>${fmt(p.currentPrice)}</span>${p.targetPrice?` &nbsp;Target: <span style="color:var(--green)">${fmt(p.targetPrice)}</span>`:''}${pct?` &nbsp;Need: <span style="color:var(--amber)">${pct}% more drop</span>`:''}</div>
+        ${p.targetPrice?`<div class="target-bar" style="margin-top:6px;max-width:280px"><div class="target-fill" style="width:${Math.min(100,Math.round((p.highestPrice-p.currentPrice)/Math.max(1,p.highestPrice-p.targetPrice)*100))}%"></div></div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <span class="alert-badge ${st}">${st==='triggered'?'🎉 Reached!':st==='active'?'● Active':'Off'}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openDetail('${p.id}')">Details</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== COMPARE VIEW =====================
+function renderCompareView() {
+  const sel = document.getElementById('compare-selector');
+  const result = document.getElementById('compare-result');
+  sel.innerHTML = state.products.map(p => `<div class="compare-chip ${state.compareList.includes(p.id)?'selected':''}" onclick="toggleCompare('${p.id}')">${state.compareList.includes(p.id)?'✓ ':''} ${p.name.slice(0,28)}${p.name.length>28?'…':''}</div>`).join('');
+  if (state.compareList.length < 2) { result.innerHTML = `<div class="empty-state"><div class="icon">⚖️</div><h3>Select 2–3 products</h3><p>Choose products above to compare side by side.</p></div>`; return; }
+  const prods = state.compareList.map(id => state.products.find(p => p.id===id)).filter(Boolean);
+  const headers = `<tr><th>Attribute</th>${prods.map(p=>`<th style="color:var(--t1);font-size:12px">${p.name.slice(0,22)}…</th>`).join('')}</tr>`;
+  const rows = [
+    ['Platform', prods.map(p=>`<span class="platform-badge ${p.platform}">${p.platform}</span>`)],
+    ['Category', prods.map(p=>p.category)],
+    ['Current Price', prods.map(p=>p.currentPrice), 'min'],
+    ['All-Time High', prods.map(p=>fmt(p.highestPrice))],
+    ['All-Time Low', prods.map(p=>p.lowestPrice), 'min'],
+    ['Average Price', prods.map(p=>fmt(p.avgPrice))],
+    ['Savings vs Peak', prods.map(p=>fmt(p.highestPrice-p.currentPrice)), 'max'],
+    ['Deal Score', prods.map(p=>dealScore(p)+'/100'), 'max'],
+    ['Data Points', prods.map(p=>p.priceHistory.length)],
+  ].map(([label, vals, best]) => {
+    let bi = -1;
+    if (best) { const nums = vals.map(v=>typeof v==='number'?v:parseInt(String(v).replace(/[₹,]/g,''))); const fn = best==='min'?Math.min:Math.max; bi = nums.indexOf(fn(...nums.filter(n=>!isNaN(n)))); }
+    return `<tr><td>${label}</td>${vals.map((v,i)=>`<td class="${i===bi?'best':''}">${typeof v==='number'?fmt(v):v}</td>`).join('')}</tr>`;
+  }).join('');
+  result.innerHTML = `<div class="compare-table"><table><thead>${headers}</thead><tbody>${rows}</tbody></table></div>
+    <div class="chart-wrap"><h3>Price History Comparison</h3><div style="position:relative;height:240px"><canvas id="compare-chart-canvas"></canvas></div></div>`;
+  setTimeout(() => {
+    const canvas = document.getElementById('compare-chart-canvas');
+    if (!canvas) return;
+    if (state.compareChart) { state.compareChart.destroy(); state.compareChart=null; }
+    const colors = ['#4f9eff','#00d4a1','#f59e0b'];
+    const allDates = [...new Set(prods.flatMap(p=>p.priceHistory.map(h=>h.date)))].sort();
+    state.compareChart = new Chart(canvas, {
+      type:'line',
+      data:{ labels:allDates.map(d=>d.slice(5)), datasets:prods.map((p,i)=>({
+        label:p.name.slice(0,18),data:allDates.map(d=>{const h=p.priceHistory.find(x=>x.date===d);return h?h.price:null;}),
+        borderColor:colors[i],backgroundColor:colors[i]+'20',fill:false,tension:0.3,pointRadius:2,borderWidth:2,spanGaps:true
+      }))},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:16}},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}},
+        scales:{x:{ticks:{color:'#475569',font:{size:11},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#475569',font:{size:11},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'K':v)},grid:{color:'rgba(255,255,255,0.04)'}}}}
+    });
+  }, 50);
+}
+
+function toggleCompare(id) {
+  if (state.compareList.includes(id)) state.compareList = state.compareList.filter(x=>x!==id);
+  else { if (state.compareList.length >= 3) { showToast('Max 3 products','red'); return; } state.compareList.push(id); }
+  localStorage.setItem('ph_compare', JSON.stringify(state.compareList));
+  renderCompareView();
+}
+function addToCompare(id) {
+  if (!state.compareList.includes(id)) { if (state.compareList.length >= 3) { showToast('Max 3 products','red'); return; } state.compareList.push(id); localStorage.setItem('ph_compare', JSON.stringify(state.compareList)); }
+  closeModal('detail'); switchView('compare');
+}
+function clearCompare() { state.compareList = []; localStorage.setItem('ph_compare','[]'); renderCompareView(); }
+
+// ===================== WISHLIST =====================
+function renderWishlistView() {
+  const favs = state.products.filter(p => p.favorite);
+  const badge = document.getElementById('wishlist-count-badge');
+  if (badge) badge.textContent = favs.length;
+  const grid = document.getElementById('wishlist-grid');
+  if (!favs.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">⭐</div><h3>No favorites yet</h3><p>Click ⭐ on any product to add it here.</p></div>`; return; }
+  grid.innerHTML = favs.map(p => productCardHTML(p)).join('');
+  favs.forEach(p => drawSparkline('spark_'+p.id, p.priceHistory));
+}
+
+// ===================== ANALYTICS =====================
+function renderAnalytics() {
+  const prods = state.products;
+  const sorted = [...prods].sort((a,b) => dealScore(b)-dealScore(a));
+  document.getElementById('best-deals-list').innerHTML = sorted.slice(0,5).map((p,i) => `
+    <div class="best-deal-item"><div class="deal-rank">${['🥇','🥈','🥉','4','5'][i]}</div>
+    <div class="deal-info"><div class="deal-name">${p.name.slice(0,36)}…</div><div class="deal-savings">↓ ${fmt(p.highestPrice-p.currentPrice)} below peak · Score: ${dealScore(p)}/100</div></div></div>`).join('');
+  const amz = prods.filter(p=>p.platform==='amazon').length;
+  const fk = prods.filter(p=>p.platform==='flipkart').length;
+  document.getElementById('platform-split').innerHTML = `
+    <div class="platform-split-item"><div class="pct" style="color:#ff9900">${amz}</div><div class="plabel">🟠 Amazon</div></div>
+    <div class="platform-split-item"><div class="pct" style="color:#4f9eff">${fk}</div><div class="plabel">🔵 Flipkart</div></div>`;
+  ['platformChart','categoryChart','changeChart','portfolioChart'].forEach(k => { if(state[k]){state[k].destroy();state[k]=null;} });
+  const pc = document.getElementById('platform-chart');
+  if (pc && (amz+fk)>0) state.platformChart = new Chart(pc,{type:'doughnut',data:{labels:['Amazon','Flipkart'],datasets:[{data:[amz,fk],backgroundColor:['#ff9900','#4f9eff'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}}}});
+  const catCounts = {};
+  prods.forEach(p => catCounts[p.category]=(catCounts[p.category]||0)+1);
+  const cc = document.getElementById('category-chart');
+  if (cc && Object.keys(catCounts).length) state.categoryChart = new Chart(cc,{type:'bar',data:{labels:Object.keys(catCounts),datasets:[{data:Object.values(catCounts),backgroundColor:['#4f9eff','#00d4a1','#f59e0b','#a78bfa','#ff5c5c','#34d399'],borderRadius:4,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#475569',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#475569',stepSize:1},grid:{color:'rgba(255,255,255,0.04)'}}}}});
+  const up = prods.filter(p=>p.priceHistory.length>1&&p.currentPrice>p.priceHistory[0].price).length;
+  const dn = prods.filter(p=>p.priceHistory.length>1&&p.currentPrice<p.priceHistory[0].price).length;
+  const fl = prods.filter(p=>p.priceHistory.length<=1||p.currentPrice===p.priceHistory[0].price).length;
+  const chc = document.getElementById('change-chart');
+  if (chc && prods.length) state.changeChart = new Chart(chc,{type:'doughnut',data:{labels:['Dropped','Rose','Stable'],datasets:[{data:[dn,up,fl],backgroundColor:['#00d4a1','#ff5c5c','#475569'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}}}});
+  const pfc = document.getElementById('portfolio-chart');
+  if (pfc && prods.length) {
+    const allDates = [...new Set(prods.flatMap(p=>p.priceHistory.map(h=>h.date)))].sort();
+    const totals = allDates.map(d => prods.reduce((sum,p)=>{ const h=p.priceHistory.find(x=>x.date===d); return sum+(h?h.price:p.currentPrice); },0));
+    state.portfolioChart = new Chart(pfc,{type:'line',data:{labels:allDates.map(d=>d.slice(5)),datasets:[{label:'Total',data:totals,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.08)',fill:true,tension:0.3,pointRadius:totals.length>30?1:3,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},scales:{x:{ticks:{color:'#475569',font:{size:11},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#475569',font:{size:11},callback:v=>'₹'+(v>=100000?(v/100000).toFixed(1)+'L':v>=1000?(v/1000).toFixed(0)+'K':v)},grid:{color:'rgba(255,255,255,0.04)'}}}}}); 
+  }
+}
+
+// ===================== HISTORY ALL =====================
+function renderHistoryAll() {
+  const content = document.getElementById('history-all-content');
+  if (!state.products.length) { content.innerHTML = `<div class="empty-state"><div class="icon">📈</div><h3>No products yet</h3><p>Add products and refresh prices to build real price history.</p></div>`; return; }
+  content.innerHTML = state.products.map(p => `
+    <div class="chart-wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span class="platform-badge ${p.platform}">${p.platform}</span>
+        <strong style="font-size:14px">${p.name.slice(0,60)}</strong>
+        <span style="margin-left:auto;font-family:var(--f2);font-size:15px;font-weight:700">${fmt(p.currentPrice)}</span>
+        <span style="font-size:11px;color:var(--t3)">${p.priceHistory.length} pts</span>
+      </div>
+      ${p.priceHistory.length < 2 ? '<div style="color:var(--amber);font-size:12.5px;padding:8px 0">Only 1 data point. Refresh prices daily to build history.</div>' : ''}
+      <div style="position:relative;height:140px"><canvas id="hist_${p.id}"></canvas></div>
+    </div>`).join('');
+  setTimeout(() => {
+    state.products.forEach(p => {
+      const canvas = document.getElementById('hist_'+p.id);
+      if (!canvas || p.priceHistory.length < 2) return;
+      new Chart(canvas,{type:'line',data:{labels:p.priceHistory.map(h=>h.date.slice(5)),datasets:[{data:p.priceHistory.map(h=>h.price),borderColor:'#4f9eff',backgroundColor:'rgba(79,158,255,0.06)',fill:true,tension:0.3,pointRadius:1,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2236',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>' '+fmt(ctx.parsed.y)}}},scales:{x:{ticks:{color:'#475569',font:{size:10},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#475569',font:{size:10},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'K':v)},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+    });
+  }, 50);
+}
+
+// ===================== SEARCH =====================
+let _pendingURLSearch = '';
+function isURL(v) { return v && (v.startsWith('http')||v.includes('amazon.in')||v.includes('flipkart.com')); }
+function detectPlatform(url) {
+  if (!url) return null;
+  if (url.includes('amazon.in')||url.includes('amazon.com')||url.includes('amzn.in')) return 'amazon';
+  if (url.includes('flipkart.com')||url.includes('fkrt.it')) return 'flipkart';
+  return null;
+}
+
+function handleSearch(val) {
+  const input = document.getElementById('search-input');
+  const clearBtn = document.getElementById('search-clear');
+  const hint = document.getElementById('url-hint');
+  clearBtn.style.display = val ? 'block' : 'none';
+  if (isURL(val)) {
+    _pendingURLSearch = val; input.classList.add('url-mode'); hint.style.display = 'block';
+    const plat = detectPlatform(val);
+    hint.textContent = (plat==='flipkart'?'🔵 Flipkart':plat==='amazon'?'🟠 Amazon':'🔗') + ' URL detected — click to track this product';
+    state.filter.search = ''; renderDashboard(); return;
+  }
+  input.classList.remove('url-mode'); hint.style.display='none'; _pendingURLSearch='';
+  state.filter.search = val;
+  if (state.view === 'dashboard') renderDashboard();
+}
+
+function handlePaste(e) { setTimeout(() => { const v=document.getElementById('search-input').value.trim(); if(isURL(v)) handleSearch(v); }, 10); }
+function clearSearch() {
+  const input = document.getElementById('search-input');
+  input.value=''; input.classList.remove('url-mode');
+  document.getElementById('search-clear').style.display='none';
+  document.getElementById('url-hint').style.display='none';
+  _pendingURLSearch=''; state.filter.search=''; input.focus();
+  if (state.view==='dashboard') renderDashboard();
+}
+function addFromURLHint() { _pendingURL = _pendingURLSearch; clearSearch(); openAddModal(); }
+function applyFilters() {
+  state.filter.platform = document.getElementById('filter-platform').value;
+  state.filter.category = document.getElementById('filter-category').value;
+  state.filter.status = document.getElementById('filter-status').value;
+  state.sort = document.getElementById('filter-sort').value;
+  renderDashboard();
+}
+function setListView(val) {
+  state.listView=val;
+  document.getElementById('product-grid').classList.toggle('list-view',val);
+  document.getElementById('grid-toggle').classList.toggle('active',!val);
+  document.getElementById('list-toggle').classList.toggle('active',val);
+  renderDashboard();
+}
+
+// ===================== NAVIGATION =====================
+function switchView(view) {
+  state.view=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+view)?.classList.add('active');
+  if (view==='alerts') renderAlertsView();
+  else if (view==='compare') renderCompareView();
+  else if (view==='wishlist') renderWishlistView();
+  else if (view==='analytics') renderAnalytics();
+  else if (view==='history-all') renderHistoryAll();
+  else renderDashboard();
+}
+
+// ===================== MODAL =====================
+function closeModal(name) {
+  document.getElementById('modal-'+name+'-overlay').classList.remove('show');
+  if (name==='detail' && state.detailChart) { state.detailChart.destroy(); state.detailChart=null; }
+}
+['add','detail'].forEach(name => {
+  document.getElementById('modal-'+name+'-overlay').addEventListener('click', function(e) { if(e.target===this) closeModal(name); });
+});
+
+// ===================== NOTIFICATIONS =====================
+function addNotif(n) {
+  state.notifications.unshift({ ...n, time: new Date().toLocaleTimeString(), id: Date.now() });
+  if (state.notifications.length > 30) state.notifications.pop();
+  localStorage.setItem('ph_notifs', JSON.stringify(state.notifications));
+  updateNotifDot(); renderNotifPanel();
+}
+function updateNotifDot() { document.getElementById('notif-dot').classList.toggle('show', state.notifications.length > 0); }
+function renderNotifPanel() {
+  const list = document.getElementById('notif-list');
+  if (!state.notifications.length) { list.innerHTML='<div class="notif-empty">No notifications yet</div>'; return; }
+  list.innerHTML = state.notifications.map(n => `
+    <div class="notif-item">
+      <div class="notif-icon ${n.type==='alert'?'green':'blue'}">${n.type==='alert'?'🎉':n.type==='add'?'➕':'📊'}</div>
+      <div><div class="notif-text"><strong>${n.type==='alert'?'Price Alert!':n.type==='add'?'Product Added':'Info'}</strong>${n.text}</div><div class="notif-time">${n.time}</div></div>
+    </div>`).join('');
+}
+function toggleNotifPanel() { document.getElementById('notif-panel').classList.toggle('show'); renderNotifPanel(); }
+function clearNotifs() { state.notifications=[]; localStorage.setItem('ph_notifs','[]'); updateNotifDot(); renderNotifPanel(); }
+document.addEventListener('click', e => {
+  const p=document.getElementById('notif-panel'); const b=document.getElementById('notif-btn');
+  if (!p.contains(e.target) && !b.contains(e.target)) p.classList.remove('show');
+});
+
+// ===================== EXPORT CSV =====================
+function exportCSV() {
+  const headers = ['Name','Platform','Category','Current Price','MRP','Target Price','Highest','Lowest','Average','Deal Score','Alert','Favorite','Data Points','URL','Tags','Notes'];
+  const rows = state.products.map(p => [`"${p.name}"`,p.platform,p.category,p.currentPrice,p.originalPrice||'',p.targetPrice||'',p.highestPrice,p.lowestPrice,p.avgPrice,dealScore(p),p.alertEnabled,p.favorite,p.priceHistory.length,`"${p.url}"`,`"${p.tags.join(',')}"`,`"${(p.notes||'').replace(/"/g,'""')}"`]);
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pricehawk_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('📤 CSV exported!','green');
+}
+
+// ===================== LOADING OVERLAY =====================
+function showGlobalLoading(msg='Loading…') {
+  document.getElementById('global-loading').classList.add('show');
+  document.getElementById('loading-text').textContent = msg;
+}
+function hideGlobalLoading() { document.getElementById('global-loading').classList.remove('show'); }
+
+// ===================== TOAST =====================
+function showToast(msg, type='blue') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+  setTimeout(() => { t.classList.add('hiding'); setTimeout(()=>t.remove(),250); }, 4000);
+}
+
+// ===================== HELPERS =====================
+function fmt(n) { if (!n && n!==0) return '—'; return '₹'+Math.round(n).toLocaleString('en-IN'); }
+function formatDate(d) { return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}); }
+
+// ===================== DEMO HISTORY =====================
+async function generateDemoHistory() {
+  const id = state.detailId;
+  if (!id) return;
+  const p = state.products.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Generate 6 months of realistic demo price history for "${p.name.slice(0,40)}"?\n\nThis simulates real-looking price fluctuations including sale events like Big Billion Days, Diwali, Republic Day etc.\n\nPerfect for demos!`)) return;
+
+  const btn = document.getElementById('demo-history-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Generating…';
+
+  try {
+    const res = await api('/api/seed-history', {
+      method: 'POST',
+      body: JSON.stringify({ productId: id, days: 180 }),
+    });
+    state.products = await api('/api/products');
+    closeModal('detail');
+    setTimeout(() => openDetail(id), 100);
+    showToast(`✅ Generated ${res.pointsAdded} days of price history!`, 'green');
+    addNotif({ type: 'add', text: `Demo history generated for: ${p.name.slice(0, 40)}` });
+  } catch (err) {
+    showToast('Failed: ' + err.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📈 Generate Demo History';
+  }
+}
+
+// ===================== START =====================
+init();
+</script>
+</body>
+</html>

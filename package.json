@@ -1,0 +1,13 @@
+{
+  "name": "pricehawk",
+  "version": "1.0.0",
+  "description": "Real-time Amazon & Flipkart price tracker",
+  "dependencies": {
+    "@netlify/functions": "^2.4.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

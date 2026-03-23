@@ -46,26 +46,25 @@ function nameFromUrl(url, platform) {
   try {
     const path = new URL(url).pathname;
     const parts = path.split('/').filter(Boolean);
-    // Flipkart: first segment is the product slug e.g. "apple-macbook-air-m5-2026-m5-16-gb-512-gb-ssd"
-    // Amazon: find the part before /dp/
     let slug = '';
     if (platform === 'amazon') {
       const dpIdx = parts.findIndex(p => p === 'dp');
       slug = dpIdx > 0 ? parts[dpIdx - 1] : parts[0];
     } else {
-      slug = parts[0] || '';
+      slug = parts.find(p => p.length > 15 && !p.startsWith('p')) || parts[0] || '';
     }
-    // Convert slug to title case, remove size/storage noise at the end
-    return slug
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
-      .replace(/\b(\d+)\s*Gb\b/gi, '$1GB')
-      .replace(/\b(\d+)\s*Tb\b/gi, '$1TB')
-      .replace(/\bSsd\b/g, 'SSD')
-      .replace(/\bRam\b/g, 'RAM')
-      .replace(/\bM(\d)\b/g, 'M$1')
-      .slice(0, 80)
-      .trim();
+    
+    slug = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      .replace(/\b(\d+)\s*Gb\b/gi, '$1GB').replace(/\b(\d+)\s*Tb\b/gi, '$1TB')
+      .replace(/\bSsd\b/g, 'SSD').replace(/\bRam\b/g, 'RAM').replace(/\bM(\d)\b/g, 'M$1')
+      .slice(0, 80).trim();
+      
+    // Guard against generic names
+    const generics = ['Electronics', 'Mobiles', 'Mobile', 'Laptops', 'Laptop', 'Fashion', 'Home', 'Beauty', 'Amazon Product', 'Flipkart Product', 'Search', 'Pr'];
+    if (generics.includes(slug) || slug.length < 4) {
+      return platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product';
+    }
+    return slug;
   } catch {
     return platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product';
   }

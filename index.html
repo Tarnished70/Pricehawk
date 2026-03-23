@@ -212,6 +212,19 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 .empty-state .icon{font-size:48px;margin-bottom:14px;opacity:.4}
 .empty-state h3{font-size:16px;font-weight:700;color:var(--t2);margin-bottom:8px}
 .empty-state p{font-size:13.5px;max-width:300px;margin:0 auto 20px;line-height:1.6}
+
+/* Sales Grid */
+.sales-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:10px}
+.sale-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;transition:transform .2s,border .2s}
+.sale-card:hover{transform:translateY(-3px);border-color:var(--border2)}
+.sale-plat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.sale-card.amazon .sale-plat{color:#ff9900}
+.sale-card.flipkart .sale-plat{color:var(--blue)}
+.sale-card.amazon{border-top:3px solid #ff9900}
+.sale-card.flipkart{border-top:3px solid var(--blue)}
+.sale-card h3{font-size:16px;font-weight:700;color:var(--t1);margin-bottom:6px}
+.sale-date{font-size:13px;color:var(--green);font-family:var(--f2);font-weight:600;margin-bottom:12px}
+.sale-desc{font-size:13px;color:var(--t2);line-height:1.5}
 /* Global loading overlay */
 #global-loading{position:fixed;inset:0;background:rgba(6,10,20,.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 #global-loading.show{display:flex}
@@ -372,6 +385,7 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
   <div class="nav-section">Insights</div>
   <div class="nav-item" onclick="switchView('analytics')" id="nav-analytics"><span class="ni">📈</span> Analytics</div>
   <div class="nav-item" onclick="switchView('history-all')" id="nav-history-all"><span class="ni">🕐</span> Price History</div>
+  <div class="nav-item" onclick="switchView('sales')" id="nav-sales"><span class="ni">🎉</span> Upcoming Sales</div>
   <div class="nav-section">Tools</div>
   <div class="nav-item" onclick="doRefresh()" id="nav-refresh"><span class="ni">🔄</span> Refresh Prices</div>
   <div class="nav-item" onclick="exportCSV()"><span class="ni">📤</span> Export CSV</div>
@@ -455,12 +469,58 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
     <div class="view" id="view-analytics">
       <div class="section-head"><div><h2>Analytics</h2><p>Price trends and savings overview</p></div></div>
       <div class="analytics-grid">
+        <div class="chart-wrap" style="grid-column:1/-1;margin-bottom:0"><canvas id="analytics-chart" height="260"></canvas></div>
+        <div class="analytics-card">
+          <h3>Top Savings</h3>
+          <div id="top-savings-list"></div>
+        </div>
+        <div class="analytics-card">
+          <h3>Platform Split</h3>
+          <div class="platform-split">
+            <div class="platform-split-item" style="color:#ff9900"><div class="pct" id="split-amz">0%</div><div class="plabel">Amazon</div></div>
+            <div class="platform-split-item" style="color:var(--blue)"><div class="pct" id="split-fk">0%</div><div class="plabel">Flipkart</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
         <div class="analytics-card"><h3>Best Deals Right Now</h3><div id="best-deals-list"></div></div>
         <div class="analytics-card"><h3>Platform Distribution</h3><div class="platform-split" id="platform-split"></div><div style="position:relative;height:180px"><canvas id="platform-chart"></canvas></div></div>
         <div class="analytics-card"><h3>Category Breakdown</h3><div style="position:relative;height:200px"><canvas id="category-chart"></canvas></div></div>
         <div class="analytics-card"><h3>Price Change Overview</h3><div style="position:relative;height:200px"><canvas id="change-chart"></canvas></div></div>
       </div>
       <div class="chart-wrap"><h3>Portfolio Value (All Products Combined)</h3><div style="position:relative;height:240px"><canvas id="portfolio-chart"></canvas></div></div>
+    </div>
+
+    <!-- UPCOMING SALES -->
+    <div class="view" id="view-sales">
+      <div class="section-head"><div><h2>🎉 Upcoming Sales</h2><p>Major upcoming events to watch for massive price drops</p></div></div>
+      <div class="sales-grid">
+        <div class="sale-card flipkart">
+          <div class="sale-plat">Flipkart</div>
+          <h3>Big Saving Days</h3>
+          <p class="sale-date">Expected: May 2026</p>
+          <p class="sale-desc">A mid-year sale event with strong offers on TVs, ACs, and mobile phones.</p>
+        </div>
+        <div class="sale-card amazon">
+          <div class="sale-plat">Amazon</div>
+          <h3>Prime Day</h3>
+          <p class="sale-date">Expected: July 2026</p>
+          <p class="sale-desc">Exclusive 48-hour event for Prime members featuring all-time lows on Amazon devices.</p>
+        </div>
+        <div class="sale-card amazon">
+          <div class="sale-plat">Amazon</div>
+          <h3>Great Indian Festival</h3>
+          <p class="sale-date">Expected: October 2026</p>
+          <p class="sale-desc">The biggest Amazon sale of the year. Historically, the best time for electronics and appliances.</p>
+        </div>
+        <div class="sale-card flipkart">
+          <div class="sale-plat">Flipkart</div>
+          <h3>Big Billion Days</h3>
+          <p class="sale-date">Expected: October 2026</p>
+          <p class="sale-desc">Flipkart's flagship event. Massive discounts on smartphones, laptops, and fashion.</p>
+        </div>
+      </div>
     </div>
 
     <!-- HISTORY ALL -->
@@ -1046,8 +1106,11 @@ function urlToName(url, platform) {
   try {
     const path = new URL(url).pathname;
     const parts = path.split('/').filter(Boolean);
-    const slug = parts.find(p => p.length > 10 && !p.startsWith('dp') && !p.startsWith('p')) || parts[0] || '';
-    return slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).slice(0, 60) || (platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product');
+    let slug = parts.find(p => p.length > 15 && !p.startsWith('dp') && !p.startsWith('p')) || parts[0] || '';
+    slug = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).slice(0, 60).trim();
+    const generics = ['Electronics', 'Mobiles', 'Mobile', 'Laptops', 'Laptop', 'Fashion', 'Home', 'Beauty', 'Amazon Product', 'Flipkart Product', 'Search', 'Pr'];
+    if (generics.includes(slug) || slug.length < 4) return platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product';
+    return slug;
   } catch { return platform === 'amazon' ? 'Amazon Product' : 'Flipkart Product'; }
 }
 
@@ -1501,6 +1564,7 @@ function switchView(view) {
   else if (view==='wishlist') renderWishlistView();
   else if (view==='analytics') renderAnalytics();
   else if (view==='history-all') renderHistoryAll();
+  else if (view==='sales') {} // Static HTML, no render func needed
   else renderDashboard();
 }
 

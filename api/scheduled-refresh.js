@@ -1,6 +1,8 @@
 // Vercel Cron Job - runs daily (configure schedule in vercel.json)
 const { getSupabase } = require('./db');
 const { scrapeUrl } = require('./scraper');
+const { Resend } = require('resend');
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 module.exports = async (req, res) => {
   console.log('[Scheduled Refresh] Starting daily price refresh...');
@@ -63,6 +65,35 @@ module.exports = async (req, res) => {
           { onConflict: 'product_id,recorded_at' }
         );
 
+      // --- EMAIL ALERTS PROCESSING ---
+      const { data: triggeredAlerts } = await supabase
+        .from('email_alerts')
+        .select('id, email, target_price')
+        .eq('product_id', product.id)
+        .gte('target_price', newPrice);
+
+      if (triggeredAlerts && triggeredAlerts.length > 0) {
+        for (const alert of triggeredAlerts) {
+          if (resend) {
+            await resend.emails.send({
+              from: 'PriceHawk <alerts@pricehawk.app>',
+              to: alert.email,
+              subject: `🚨 Price Drop Alert: ${product.name.slice(0, 40)}`,
+              html: `<p>Great news! The product <strong>${product.name}</strong> has dropped to <strong>₹${newPrice}</strong>, which meets your target price of ₹${alert.target_price}!</p>
+                     <p><a href="${product.url}" style="display:inline-block;padding:10px 16px;background:#00d4a1;color:#111827;text-decoration:none;border-radius:4px;font-weight:bold;">Buy it now on ${product.platform === 'amazon' ? 'Amazon' : 'Flipkart'}</a></p>
+                     <p>- The PriceHawk Team</p>`
+            }).catch(e => console.error('[Resend Error]', e.message));
+          } else {
+            console.log(`[MOCK EMAIL] To: ${alert.email} | Drop: ₹${newPrice} (Target: ₹${alert.target_price})`);
+          }
+          alertsTriggered++;
+        }
+        
+        // Remove triggered alerts to avoid spamming tomorrow
+        const alertIds = triggeredAlerts.map(a => a.id);
+        await supabase.from('email_alerts').delete().in('id', alertIds);
+      }
+
       updated++;
 
       console.log(`[OK] ${product.name}: ₹${newPrice}`);
@@ -75,6 +106,6 @@ module.exports = async (req, res) => {
     }
   }
 
-  console.log(`[Scheduled Refresh] Done. Updated: ${updated}, Failed: ${failed}`);
-  return res.status(200).json({ updated, failed });
+  console.log(`[Scheduled Refresh] Done. Updated: ${updated}, Failed: ${failed}, Emails Dispatched: ${alertsTriggered}`);
+  return res.status(200).json({ updated, failed, emails_sent: alertsTriggered });
 };

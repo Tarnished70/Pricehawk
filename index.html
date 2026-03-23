@@ -597,7 +597,7 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
           </div>
           <span id="fetched-platform-badge" class="platform-badge"></span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
           <div style="flex:1">
             <label class="form-label">🔔 Alert me when price drops to (₹) — optional</label>
             <input class="form-input" id="add-target" type="number" placeholder="e.g. 59999" min="0"
@@ -610,6 +610,10 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
               <option>Books</option><option>Sports</option><option>Beauty</option><option>Other</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label class="form-label">📧 Email Notifications (Optional)</label>
+          <input class="form-input" id="add-email" type="email" placeholder="Enter your email to get notified when target is hit" onkeydown="if(event.key==='Enter') finalizeTracking()">
         </div>
       </div>
 
@@ -1087,13 +1091,28 @@ async function startTracking() {
 async function finalizeTracking() {
   if (!_fetchedData) return;
   const target = parseFloat(document.getElementById('add-target').value);
+  const email = document.getElementById('add-email').value.trim();
   if (!isNaN(target) && target > 0) {
     // We added the new product to the front of trackedIds
     if (state.trackedIds.length > 0) {
       const topId = state.trackedIds[0];
       savePrefs(topId, { targetPrice: target, alertEnabled: true });
+      
+      if (email) {
+        try {
+          await api('/api/alerts', {
+            method: 'POST',
+            body: JSON.stringify({ product_id: topId, email, target_price: target })
+          });
+          savePrefs(topId, { emailAlert: email });
+          showToast(`🔔 Email Alert set for ${fmt(target)}!`, 'green');
+        } catch (e) {
+          showToast(`⚠️ Local alert set, but email failed: ${e.message}`, 'amber');
+        }
+      } else {
+        showToast(`🔔 Local alert set for ${fmt(target)}!`, 'green');
+      }
       await init();
-      showToast(`🔔 Alert set for ${fmt(target)}!`, 'green');
     }
   }
   closeModal('add');
@@ -1198,7 +1217,11 @@ function openDetail(id) {
       <div class="form-group">
         <label class="form-label">Alert when price drops to (₹)</label>
         <input class="form-input" id="detail-target" type="number" value="${p.targetPrice||''}" placeholder="e.g. 89999">
-        <div class="form-hint">You'll be alerted when the live price drops to or below this amount</div>
+        <div class="form-hint">You'll be alerted locally when the live price drops to or below this amount</div>
+      </div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">📧 Email Notifications (Optional)</label>
+        <input class="form-input" id="detail-email" type="email" value="${p.emailAlert||''}" placeholder="Enter an email to receive server-side alerts">
       </div>
       ${p.targetPrice ? `<div style="margin-top:12px;font-size:12.5px;color:var(--t2)">
         Need <strong style="color:var(--green)">${fmt(Math.max(0, p.currentPrice - p.targetPrice))}</strong> more drop
@@ -1283,6 +1306,7 @@ async function saveProductEdits() {
   const cat = document.getElementById('edit-category')?.value;
   const notes = document.getElementById('edit-notes')?.value;
   const target = parseFloat(document.getElementById('detail-target')?.value);
+  const email = document.getElementById('detail-email')?.value.trim();
   
   const dbUpdates = { id: p.id };
   if (name) dbUpdates.name = name;
@@ -1293,6 +1317,27 @@ async function saveProductEdits() {
   const prefs = {};
   if (notes !== undefined) prefs.notes = notes;
   if (!isNaN(target) && target > 0) { prefs.targetPrice = target; prefs.alertEnabled = true; }
+  else { prefs.targetPrice = null; prefs.alertEnabled = false; }
+  
+  if (email && email !== p.emailAlert && !isNaN(target) && target > 0) {
+    try {
+      await api('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: p.id, email, target_price: target })
+      });
+      prefs.emailAlert = email;
+      showToast(`📧 Email Alert updated!`, 'green');
+    } catch(e) { showToast(`⚠️ Email update failed: ${e.message}`, 'amber'); }
+  } else if (!email && p.emailAlert) {
+    try {
+      await api('/api/alerts', {
+        method: 'DELETE',
+        body: JSON.stringify({ product_id: p.id, email: p.emailAlert })
+      });
+      prefs.emailAlert = null;
+      showToast(`🔕 Email Alert removed`, 'slate');
+    } catch(e) {}
+  }
   
   savePrefs(p.id, prefs);
 

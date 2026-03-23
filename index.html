@@ -364,7 +364,8 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
     <span class="real-badge">🟢 Live Data</span>
   </div>
   <div class="nav-section">Tracking</div>
-  <div class="nav-item active" onclick="switchView('dashboard')" id="nav-dashboard"><span class="ni">📊</span> Dashboard</div>
+  <div class="nav-item active" onclick="switchView('dashboard')" id="nav-dashboard"><span class="ni">📊</span> My Dashboard</div>
+  <div class="nav-item" onclick="switchView('trending')" id="nav-trending"><span class="ni">🔥</span> Trending<span class="count-badge" style="background:#ffefe5;color:#f97316;font-size:9px">GLOBAL</span></div>
   <div class="nav-item" onclick="switchView('alerts')" id="nav-alerts"><span class="ni">🔔</span> Alerts<span class="nav-badge" id="alerts-badge" style="display:none">0</span></div>
   <div class="nav-item" onclick="switchView('compare')" id="nav-compare"><span class="ni">⚖️</span> Compare</div>
   <div class="nav-item" onclick="switchView('wishlist')" id="nav-wishlist"><span class="ni">⭐</span> Wishlist</div>
@@ -423,6 +424,12 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
       <div class="product-grid" id="product-grid">
         <div class="empty-state" style="grid-column:1/-1"><div class="icon">🦅</div><h3>No products yet</h3><p>Paste an Amazon or Flipkart URL to start tracking real prices.</p><button class="btn btn-primary" onclick="openAddModal()">+ Add Your First Product</button></div>
       </div>
+    </div>
+
+    <!-- TRENDING -->
+    <div class="view" id="view-trending">
+      <div class="section-head"><div><h2>🔥 Trending Globally</h2><p>Popular products recently tracked by other users</p></div><button class="btn btn-ghost btn-sm" onclick="init()">Refresh List</button></div>
+      <div class="product-grid" id="trending-grid"></div>
     </div>
 
     <!-- ALERTS -->
@@ -602,7 +609,10 @@ async function api(path, opts = {}) {
 
 // ===================== STATE =====================
 let state = {
+  trackedIds: JSON.parse(localStorage.getItem('ph_tracked_ids') || '[]'),
+  personalPrefs: JSON.parse(localStorage.getItem('ph_prefs') || '{}'),
   products: [],
+  trendingProducts: [],
   view: 'dashboard',
   filter: { platform:'all', category:'all', search:'', status:'all' },
   sort: 'added',
@@ -611,21 +621,50 @@ let state = {
   detailId: null,
   listView: false,
   addTags: [],
-  detailChart: null,
-  compareChart: null,
-  platformChart: null,
-  categoryChart: null,
-  changeChart: null,
-  portfolioChart: null,
+  detailChart: null, compareChart: null, platformChart: null, categoryChart: null, changeChart: null, portfolioChart: null,
 };
+
+function savePrefs(id, prefs) {
+  if (!state.personalPrefs[id]) state.personalPrefs[id] = {};
+  Object.assign(state.personalPrefs[id], prefs);
+  localStorage.setItem('ph_prefs', JSON.stringify(state.personalPrefs));
+}
+
+function trackId(id) {
+  if (!state.trackedIds.includes(id)) {
+    state.trackedIds.unshift(id); // add to top
+    localStorage.setItem('ph_tracked_ids', JSON.stringify(state.trackedIds));
+  }
+}
+
+function untrackId(id) {
+  state.trackedIds = state.trackedIds.filter(x => x !== id);
+  localStorage.setItem('ph_tracked_ids', JSON.stringify(state.trackedIds));
+}
 
 // ===================== INIT =====================
 async function init() {
-  showGlobalLoading('Loading your products…');
+  showGlobalLoading('Loading your dashboard…');
   try {
-    state.products = await api('/api/products');
+    if (state.trackedIds.length > 0) {
+      const pData = await api('/api/products?ids=' + state.trackedIds.join(','));
+      // Sort to match trackedIds order (newest added first)
+      pData.sort((a, b) => state.trackedIds.indexOf(a.id) - state.trackedIds.indexOf(b.id));
+      
+      state.products = pData.map(p => {
+        const pref = state.personalPrefs[p.id] || {};
+        const isAlertTriggered = !!(pref.alertEnabled && pref.targetPrice && p.currentPrice <= pref.targetPrice);
+        return { ...p, ...pref, alertTriggered: isAlertTriggered };
+      });
+    } else {
+      state.products = [];
+    }
+    
+    // Also fetch trending to show soon
+    state.trendingProducts = await api('/api/products?trending=true');
+    
     renderAll();
-    if (state.products.length === 0) showToast('Add your first product to start tracking real prices!', 'blue');
+    if (state.products.length === 0) showToast('Paste an Amazon URL to track your first product!', 'blue');
   } catch (err) {
     showToast('Could not load products: ' + err.message, 'red');
     state.products = [];
@@ -637,20 +676,28 @@ async function init() {
 
 // ===================== REFRESH (REAL SCRAPING) =====================
 async function doRefresh() {
-  if (state.products.length === 0) { showToast('Add some products first!', 'amber'); return; }
+  if (state.trackedIds.length === 0) { showToast('Track some products first!', 'amber'); return; }
   const btn = document.getElementById('refresh-btn');
   btn.textContent = '⟳ Scraping…';
   btn.disabled = true;
-  showGlobalLoading(`Scraping prices for ${state.products.length} product${state.products.length>1?'s':''}…\nThis may take 20–60 seconds.`);
+  showGlobalLoading(`Scraping prices for ${state.trackedIds.length} product${state.trackedIds.length>1?'s':''}…\nThis may take 20–60 seconds.`);
   try {
-    const result = await api('/api/refresh', { method: 'POST' });
-    state.products = await api('/api/products');
+    const result = await api('/api/refresh', { method: 'POST', body: JSON.stringify({ ids: state.trackedIds }) });
+    let alertsTriggeredCount = 0;
+    
+    const pData = await api('/api/products?ids=' + state.trackedIds.join(','));
+    state.products = pData.map(p => {
+      const oldP = state.products.find(x => x.id === p.id);
+      const pref = state.personalPrefs[p.id] || {};
+      const isAlertTriggered = !!(pref.alertEnabled && pref.targetPrice && p.currentPrice <= pref.targetPrice);
+      if (isAlertTriggered && oldP && !oldP.alertTriggered) alertsTriggeredCount++;
+      return { ...p, ...pref, alertTriggered: isAlertTriggered };
+    });
+
     renderAll();
-    const alertMsg = result.alertsTriggered > 0 ? ` · 🎉 ${result.alertsTriggered} alert(s) triggered!` : '';
-    showToast(`✅ Updated ${result.updated}/${result.total} products${alertMsg}`, result.alertsTriggered > 0 ? 'green' : 'blue');
-    if (result.alertsTriggered > 0) {
-      addNotif({ type:'alert', text:`${result.alertsTriggered} product(s) hit target price!` });
-    }
+    const alertMsg = alertsTriggeredCount > 0 ? ` · 🎉 ${alertsTriggeredCount} alert(s) triggered!` : '';
+    showToast(`✅ Updated ${result.updated}/${result.total} products${alertMsg}`, alertsTriggeredCount > 0 ? 'green' : 'blue');
+    if (alertsTriggeredCount > 0) addNotif({ type:'alert', text:`${alertsTriggeredCount} product(s) hit target price!` });
     const now = new Date().toLocaleTimeString();
     document.getElementById('sf-updated').textContent = 'Updated ' + now;
     result.results.filter(r => !r.success).forEach(r => addNotif({ type:'warn', text:`Could not fetch: ${r.name} — ${r.reason}` }));
@@ -663,7 +710,6 @@ async function doRefresh() {
   }
 }
 
-// ===================== RENDER =====================
 function renderAll() {
   updateMetrics();
   renderDashboard();
@@ -671,7 +717,8 @@ function renderAll() {
   updateAlertsBadge();
   updateNotifDot();
   const v = state.view;
-  if (v === 'alerts') renderAlertsView();
+  if (v === 'trending') renderTrending();
+  else if (v === 'alerts') renderAlertsView();
   else if (v === 'compare') renderCompareView();
   else if (v === 'wishlist') renderWishlistView();
   else if (v === 'analytics') renderAnalytics();
@@ -692,7 +739,7 @@ function updateMetrics() {
 function updateSidebar() {
   const p = state.products;
   const savings = p.reduce((s,x) => s + Math.max(0, x.highestPrice - x.currentPrice), 0);
-  document.getElementById('sf-products').textContent = p.length;
+  document.getElementById('sf-products').textContent = state.trackedIds.length;
   document.getElementById('sf-alerts').textContent = p.filter(x => x.alertEnabled).length;
   document.getElementById('sf-savings').textContent = fmt(savings);
 }
@@ -736,11 +783,29 @@ function renderDashboard() {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">${state.filter.search?'🔍':'🦅'}</div><h3>${state.filter.search?'No products found':'No products yet'}</h3><p>${state.filter.search?'Try a different search term.':'Paste any Amazon or Flipkart URL to start tracking real prices.'}</p>${!state.filter.search?'<button class="btn btn-primary" onclick="openAddModal()">+ Add Product</button>':''}</div>`;
     return;
   }
-  grid.innerHTML = prods.map(p => productCardHTML(p)).join('');
+  grid.innerHTML = prods.map(p => productCardHTML(p, false)).join('');
   prods.forEach(p => drawSparkline('spark_'+p.id, p.priceHistory));
 }
 
-function productCardHTML(p) {
+function renderTrending() {
+  const grid = document.getElementById('trending-grid');
+  if (!state.trendingProducts || state.trendingProducts.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🔥</div><h3>No trending products</h3><p>Check back later to see what others are tracking globally.</p></div>`;
+    return;
+  }
+  // Filter out products we are already tracking
+  const untrackedTrending = state.trendingProducts.filter(p => !state.trackedIds.includes(p.id));
+  
+  if (untrackedTrending.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🦅</div><h3>You're tracking everything hot!</h3><p>You have already added all current globally trending products to your dashboard.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = untrackedTrending.map(p => productCardHTML({ ...p, alertTriggered: false, targetPrice: null, favorite: false }, true)).join('');
+  untrackedTrending.forEach(p => drawSparkline('spark_trend_'+p.id, p.priceHistory));
+}
+
+function productCardHTML(p, isTrending = false) {
   const hist = p.priceHistory;
   const first = hist.length > 1 ? hist[0].price : p.currentPrice;
   const change = first ? ((p.currentPrice - first) / first) * 100 : 0;
@@ -749,27 +814,33 @@ function productCardHTML(p) {
   const isATL = hist.length > 1 && p.currentPrice <= p.lowestPrice;
   const score = dealScore(p);
   const scoreColor = score > 60 ? '#00d4a1' : score > 30 ? '#f59e0b' : '#ff5c5c';
-  const savings = p.highestPrice - p.currentPrice;
+  const savings = Math.max(0, p.highestPrice - p.currentPrice);
   const hasTarget = p.targetPrice && p.targetPrice > 0;
   const targetPct = hasTarget ? Math.min(100, Math.round(((p.highestPrice - p.currentPrice) / Math.max(1, p.highestPrice - p.targetPrice)) * 100)) : 0;
   const dataPoints = hist.length;
+  
+  const cid = isTrending ? 'spark_trend_'+p.id : 'spark_'+p.id;
+  
   return `<div class="product-card ${p.alertTriggered?'alert-triggered':''}" id="card_${p.id}">
     <div class="card-header">
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
           <span class="platform-badge ${p.platform}">${p.platform==='amazon'?'🟠 Amazon':'🔵 Flipkart'}</span>
-          ${dataPoints > 1 ? `<span style="font-size:10px;color:var(--t3);font-family:var(--f2)">${dataPoints} data pts</span>` : '<span style="font-size:10px;color:var(--amber)">1 data pt — refresh to build history</span>'}
+          ${dataPoints > 1 ? `<span style="font-size:10px;color:var(--t3);font-family:var(--f2)">${dataPoints} data pts</span>` : '<span style="font-size:10px;color:var(--amber)">1 data pt</span>'}
         </div>
-        <div class="card-title" title="${p.name}" onclick="openDetail('${p.id}')">${p.name}</div>
+        <div class="card-title" title="${p.name}" onclick="${isTrending ? `window.open('${p.url}','_blank')` : `openDetail('${p.id}')`}">${p.name}</div>
         ${p.tags && p.tags.length ? `<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">${p.tags.map(t=>`<span class="card-cat">${t}</span>`).join('')}</div>` : ''}
       </div>
       <div class="card-actions-top">
-        <button class="icon-btn fav ${p.favorite?'active':''}" onclick="toggleFav('${p.id}')" title="Wishlist">⭐</button>
-        <button class="icon-btn ${p.alertEnabled?'alert-on':''}" onclick="toggleAlert('${p.id}')" title="Toggle alert">🔔</button>
-        <button class="icon-btn" onclick="openDetail('${p.id}')">⋯</button>
+        ${isTrending ? 
+          `<button class="btn btn-primary btn-sm" onclick="trackTrending('${p.id}')">+ Track</button>` : 
+          `<button class="icon-btn fav ${p.favorite?'active':''}" onclick="toggleFav('${p.id}')" title="Wishlist">⭐</button>
+           <button class="icon-btn ${p.alertEnabled?'alert-on':''}" onclick="toggleAlert('${p.id}')" title="Toggle alert">🔔</button>
+           <button class="icon-btn" onclick="openDetail('${p.id}')">⋯</button>`
+        }
       </div>
     </div>
-    <div class="card-price-section" onclick="openDetail('${p.id}')">
+    <div class="card-price-section" onclick="${isTrending ? `window.open('${p.url}','_blank')` : `openDetail('${p.id}')`}">
       <div>
         <span class="price-main">${fmt(p.currentPrice)}</span>
         ${hist.length > 1 ? `<span class="price-change ${changeClass}">${changeIcon} ${Math.abs(change).toFixed(1)}%</span>` : '<span class="price-change flat" style="font-size:10px">tracking…</span>'}
@@ -783,7 +854,7 @@ function productCardHTML(p) {
       ${savings > 100 ? `<div class="savings-text">↓ ${fmt(savings)} below peak</div>` : ''}
       ${hasTarget ? `<div class="target-progress"><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t3);font-family:var(--f2)"><span>Target: ${fmt(p.targetPrice)}</span><span>${targetPct}%</span></div><div class="target-bar"><div class="target-fill" style="width:${targetPct}%"></div></div></div>` : ''}
     </div>
-    <div class="sparkline-section"><canvas id="spark_${p.id}"></canvas></div>
+    <div class="sparkline-section"><canvas id="${cid}"></canvas></div>
     <div class="card-footer">
       <div class="deal-score"><span>${score}</span><div class="deal-bar"><div class="deal-fill" style="width:${score}%;background:${scoreColor}"></div></div><span style="font-size:10px">deal score</span></div>
       <span class="card-cat">${p.category}</span>
@@ -907,8 +978,10 @@ async function startTracking() {
     _fetchedData = { ...data, url, platform: plat };
     setTrackStatus('success', `✅ Found! Saving to your dashboard…`, false, 100);
 
-    // Save immediately to DB
-    await api('/api/products', {
+    setTrackStatus('loading', `Checking database…`, true, 75);
+
+    // Save/Search globally
+    const res = await api('/api/products', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name || urlToName(url, plat),
@@ -916,16 +989,20 @@ async function startTracking() {
         platform: plat,
         category: document.getElementById('add-category').value,
         currentPrice: data.price,
-        originalPrice: data.originalPrice || null,
-        targetPrice: null,
-        alertEnabled: false,
-        notes: '',
-        tags: [],
+        originalPrice: data.originalPrice || null
       })
     });
 
-    state.products = await api('/api/products');
-    renderAll();
+    const newId = res.id;
+    trackId(newId); // add to local tracked array
+    
+    if (res.isNew) {
+      showToast('🎉 New product added globally!', 'green');
+    } else {
+      showToast('⚡ Found instantly in global database!', 'blue');
+    }
+
+    await init(); // Fetch fresh list w/ preferences
 
     // Show the optional alert step
     document.getElementById('fetched-name').textContent = (data.name || urlToName(url, plat)).slice(0, 60);
@@ -937,13 +1014,12 @@ async function startTracking() {
     pb.className = 'platform-badge ' + plat;
     pb.textContent = plat === 'amazon' ? '🟠 Amazon' : '🔵 Flipkart';
     document.getElementById('step-alert').style.display = 'block';
-    setTrackStatus('success', `✅ ${fmt(data.price)} — Added to dashboard! Set an alert price below (optional).`, false, 100);
+    setTrackStatus('success', `✅ ${fmt(data.price)} — Tracked on your dashboard! Set an alert below.`, false, 100);
 
     btn.disabled = false;
     btn.textContent = '✅ Done — Close';
     btn.onclick = () => closeModal('add');
-    showToast('🎉 Product added! Price history will build daily.', 'green');
-    addNotif({ type: 'add', text: 'Added: ' + (data.name || url).slice(0, 40) });
+    addNotif({ type: 'add', text: 'Started tracking: ' + (data.name || url).slice(0, 40) });
 
   } catch (err) {
     setTrackStatus('error', '❌ ' + err.message);
@@ -955,15 +1031,11 @@ async function finalizeTracking() {
   if (!_fetchedData) return;
   const target = parseFloat(document.getElementById('add-target').value);
   if (!isNaN(target) && target > 0) {
-    // Update the last added product with alert
-    const latest = state.products[0];
-    if (latest) {
-      await api('/api/products', {
-        method: 'PUT',
-        body: JSON.stringify({ id: latest.id, targetPrice: target, alertEnabled: true })
-      });
-      state.products = await api('/api/products');
-      renderAll();
+    // We added the new product to the front of trackedIds
+    if (state.trackedIds.length > 0) {
+      const topId = state.trackedIds[0];
+      savePrefs(topId, { targetPrice: target, alertEnabled: true });
+      await init();
       showToast(`🔔 Alert set for ${fmt(target)}!`, 'green');
     }
   }
@@ -1134,12 +1206,12 @@ function setDRange(days, btn) {
 async function toggleAlertDetail() {
   const p = state.products.find(x => x.id === state.detailId);
   if (!p) return;
-  p.alertEnabled = !p.alertEnabled;
+  const isEnabled = !p.alertEnabled;
+  savePrefs(p.id, { alertEnabled: isEnabled });
   const tog = document.getElementById('dtoggle');
-  if (tog) tog.classList.toggle('on', p.alertEnabled);
-  await api('/api/products', { method:'PUT', body: JSON.stringify({ id: p.id, alertEnabled: p.alertEnabled }) });
-  updateAlertsBadge(); updateSidebar();
-  showToast(p.alertEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
+  if (tog) tog.classList.toggle('on', isEnabled);
+  await init();
+  showToast(isEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
 }
 
 async function saveProductEdits() {
@@ -1151,18 +1223,26 @@ async function saveProductEdits() {
   const cat = document.getElementById('edit-category')?.value;
   const notes = document.getElementById('edit-notes')?.value;
   const target = parseFloat(document.getElementById('detail-target')?.value);
-  const updates = { id: p.id };
-  if (name) updates.name = name;
-  if (!isNaN(price) && price > 0) updates.currentPrice = price;
-  if (!isNaN(mrp)) updates.originalPrice = mrp;
-  if (cat) updates.category = cat;
-  if (notes !== undefined) updates.notes = notes;
-  if (!isNaN(target) && target > 0) { updates.targetPrice = target; updates.alertEnabled = true; }
+  
+  const dbUpdates = { id: p.id };
+  if (name) dbUpdates.name = name;
+  if (!isNaN(price) && price > 0) dbUpdates.currentPrice = price;
+  if (!isNaN(mrp)) dbUpdates.originalPrice = mrp;
+  if (cat) dbUpdates.category = cat;
+
+  const prefs = {};
+  if (notes !== undefined) prefs.notes = notes;
+  if (!isNaN(target) && target > 0) { prefs.targetPrice = target; prefs.alertEnabled = true; }
+  
+  savePrefs(p.id, prefs);
+
   try {
-    await api('/api/products', { method:'PUT', body: JSON.stringify(updates) });
-    state.products = await api('/api/products');
+    // Only call PUT if there are global fields to update
+    if (Object.keys(dbUpdates).length > 1) {
+      await api('/api/products', { method:'PUT', body: JSON.stringify(dbUpdates) });
+    }
+    await init();
     closeModal('detail');
-    renderAll();
     showToast('✅ Product updated!', 'green');
   } catch (err) {
     showToast('Update failed: ' + err.message, 'red');
@@ -1172,22 +1252,18 @@ async function saveProductEdits() {
 async function deleteCurrentProduct() {
   const p = state.products.find(x => x.id === state.detailId);
   const confirmed = await confirmAction({
-    title: 'Delete Product',
-    message: `Are you sure you want to delete <strong>${(p?.name || 'this product').slice(0,50)}</strong> and all its price history?<br><br>This action cannot be undone.`,
-    confirmText: '🗑️ Delete',
+    title: 'Untrack Product',
+    message: `Are you sure you want to stop tracking <strong>${(p?.name || 'this product').slice(0,50)}</strong>?`,
+    confirmText: '🗑️ Untrack',
     type: 'danger'
   });
   if (!confirmed) return;
-  try {
-    await api('/api/products', { method:'DELETE', body: JSON.stringify({ id: state.detailId }) });
-    state.products = state.products.filter(p => p.id !== state.detailId);
-    state.compareList = state.compareList.filter(id => id !== state.detailId);
-    closeModal('detail');
-    renderAll();
-    showToast('🗑️ Product deleted', 'red');
-  } catch (err) {
-    showToast('Delete failed: ' + err.message, 'red');
-  }
+  
+  untrackId(state.detailId);
+  state.compareList = state.compareList.filter(id => id !== state.detailId);
+  closeModal('detail');
+  await init();
+  showToast('🗑️ Product no longer tracked', 'blue');
 }
 
 function visitProduct() {
@@ -1199,19 +1275,19 @@ function visitProduct() {
 async function toggleFav(id) {
   const p = state.products.find(x => x.id === id);
   if (!p) return;
-  p.favorite = !p.favorite;
-  renderDashboard(); renderWishlistView();
-  await api('/api/products', { method:'PUT', body: JSON.stringify({ id, favorite: p.favorite }) });
-  showToast(p.favorite ? '⭐ Added to wishlist' : '☆ Removed from wishlist', 'amber');
+  const isFav = !p.favorite;
+  savePrefs(id, { favorite: isFav });
+  await init();
+  showToast(isFav ? '⭐ Added to wishlist' : '☆ Removed from wishlist', 'amber');
 }
 
 async function toggleAlert(id) {
   const p = state.products.find(x => x.id === id);
   if (!p) return;
-  p.alertEnabled = !p.alertEnabled;
-  renderDashboard(); updateAlertsBadge();
-  await api('/api/products', { method:'PUT', body: JSON.stringify({ id, alertEnabled: p.alertEnabled }) });
-  showToast(p.alertEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
+  const isEnabled = !p.alertEnabled;
+  savePrefs(id, { alertEnabled: isEnabled });
+  await init();
+  showToast(isEnabled ? '🔔 Alert enabled' : '🔕 Alert disabled', 'blue');
 }
 
 // ===================== ALERTS VIEW =====================
@@ -1418,12 +1494,21 @@ function switchView(view) {
   document.getElementById('view-'+view)?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('nav-'+view)?.classList.add('active');
-  if (view==='alerts') renderAlertsView();
+  
+  if (view==='trending') renderTrending();
+  else if (view==='alerts') renderAlertsView();
   else if (view==='compare') renderCompareView();
   else if (view==='wishlist') renderWishlistView();
   else if (view==='analytics') renderAnalytics();
   else if (view==='history-all') renderHistoryAll();
   else renderDashboard();
+}
+
+async function trackTrending(id) {
+  trackId(id);
+  const p = state.trendingProducts.find(x => x.id === id);
+  showToast(`Added ${p ? p.name.slice(0,30)+'...' : 'product'} to your dashboard!`, 'green');
+  await init();
 }
 
 // ===================== MODAL =====================

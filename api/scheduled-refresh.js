@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
   // Get ALL products across all sessions
   const { data: products, error } = await supabase
     .from('products')
-    .select('id, name, url, platform, current_price, target_price, alert_enabled, alert_triggered, session_id');
+    .select('id, name, url, platform, current_price, session_id');
 
   if (error) {
     console.error('[Scheduled Refresh] Fetch error:', error.message);
@@ -47,14 +47,11 @@ module.exports = async (req, res) => {
       }
 
       const newPrice = scraped.price;
-      const wasTriggered = product.alert_triggered;
-      const isTriggered = product.alert_enabled && product.target_price && newPrice <= parseFloat(product.target_price);
 
       await supabase
         .from('products')
         .update({
           current_price: newPrice,
-          alert_triggered: isTriggered || wasTriggered,
           updated_at: new Date().toISOString(),
         })
         .eq('id', product.id);
@@ -66,7 +63,6 @@ module.exports = async (req, res) => {
           { onConflict: 'product_id,recorded_at' }
         );
 
-      if (isTriggered && !wasTriggered) alertsTriggered++;
       updated++;
 
       console.log(`[OK] ${product.name}: ₹${newPrice}`);
@@ -79,6 +75,6 @@ module.exports = async (req, res) => {
     }
   }
 
-  console.log(`[Scheduled Refresh] Done. Updated: ${updated}, Failed: ${failed}, Alerts: ${alertsTriggered}`);
-  return res.status(200).json({ updated, failed, alertsTriggered });
+  console.log(`[Scheduled Refresh] Done. Updated: ${updated}, Failed: ${failed}`);
+  return res.status(200).json({ updated, failed });
 };

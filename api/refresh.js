@@ -19,19 +19,19 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const sessionId = req.headers['x-session-id'];
-  if (!sessionId) {
-    return res.status(400).json({ error: 'X-Session-ID required' });
+  const { ids } = req.body || {};
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Array of ids required' });
   }
 
   const supabase = getSupabase();
 
   try {
-    // Fetch all products for this session
+    // Fetch specifically requested products
     const { data: products, error } = await supabase
       .from('products')
       .select('*')
-      .eq('session_id', sessionId);
+      .in('id', ids);
 
     if (error) throw error;
     if (!products || products.length === 0) {
@@ -52,15 +52,12 @@ module.exports = async (req, res) => {
         }
 
         const newPrice = scraped.price;
-        const wasAlertTriggered = product.alert_triggered;
-        const isAlertTriggered = product.alert_enabled && product.target_price && newPrice <= parseFloat(product.target_price);
 
-        // Update product
+        // Update product current price and updated_at
         await supabase
           .from('products')
           .update({
             current_price: newPrice,
-            alert_triggered: isAlertTriggered || wasAlertTriggered,
             updated_at: new Date().toISOString(),
           })
           .eq('id', product.id);
@@ -77,7 +74,6 @@ module.exports = async (req, res) => {
           oldPrice: parseFloat(product.current_price),
           newPrice,
           success: true,
-          alertTriggered: isAlertTriggered && !wasAlertTriggered,
         });
       } catch (err) {
         console.error(`Failed to scrape ${product.url}:`, err.message);
@@ -86,9 +82,8 @@ module.exports = async (req, res) => {
     }
 
     const successCount = results.filter(r => r.success).length;
-    const alertCount = results.filter(r => r.alertTriggered).length;
 
-    return res.status(200).json({ updated: successCount, total: products.length, alertsTriggered: alertCount, results });
+    return res.status(200).json({ updated: successCount, total: products.length, results });
   } catch (err) {
     console.error('Refresh error:', err);
     return res.status(500).json({ error: err.message });

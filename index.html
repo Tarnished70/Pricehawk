@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PriceHawk — Real Price Tracker</title>
+<meta name="description" content="Track real prices on Amazon.in and Flipkart with PriceHawk. Get price drop alerts, compare products, and view price history — all powered by live scraping.">
+<meta name="theme-color" content="#060a14">
+<meta property="og:title" content="PriceHawk — Real Price Tracker">
+<meta property="og:description" content="Track Amazon & Flipkart prices in real-time. Set alerts, compare products, analyze trends.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦅</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -83,7 +90,7 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 .platform-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;flex-shrink:0}
 .platform-badge.amazon{background:rgba(255,153,0,.15);color:#ff9900}
 .platform-badge.flipkart{background:rgba(79,158,255,.15);color:#4f9eff}
-.card-title{font-size:13.5px;font-weight:600;line-height:1.4;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;transition:color .15s}.card-title:hover{color:var(--blue);text-decoration:underline}
+.card-title{font-size:13.5px;font-weight:600;line-height:1.4;flex:1;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;transition:color .15s}.card-title:hover{color:var(--blue);text-decoration:underline}
 .card-actions-top{display:flex;gap:6px;flex-shrink:0}
 .icon-btn{background:none;border:none;cursor:pointer;color:var(--t3);font-size:15px;padding:2px;transition:color .15s;line-height:1}
 .icon-btn:hover{color:var(--t1)}.icon-btn.fav.active{color:#f59e0b}.icon-btn.alert-on{color:var(--green)}
@@ -241,6 +248,97 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .real-badge{display:inline-flex;align-items:center;gap:4px;background:var(--green-d);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(0,212,161,.2)}
 .last-updated{font-size:11px;color:var(--t3);font-family:var(--f2)}
+
+/* ===== PULSING LIVE BADGE ===== */
+.real-badge::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;animation:livePulse 2s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,212,161,.6)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(0,212,161,0)}}
+
+/* ===== CARD FADE-IN ===== */
+.product-card{animation:cardIn .35s ease both}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.product-grid .product-card:nth-child(1){animation-delay:0s}
+.product-grid .product-card:nth-child(2){animation-delay:.05s}
+.product-grid .product-card:nth-child(3){animation-delay:.1s}
+.product-grid .product-card:nth-child(4){animation-delay:.15s}
+.product-grid .product-card:nth-child(5){animation-delay:.2s}
+.product-grid .product-card:nth-child(6){animation-delay:.25s}
+.product-card:hover{border-color:var(--border2);transform:translateY(-3px) scale(1.01);box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(79,158,255,.08)}
+
+/* ===== METRIC CARD GLOW ===== */
+.metric-card{transition:transform .2s,box-shadow .2s}
+.metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.metric-card.green:hover{box-shadow:0 8px 24px rgba(0,212,161,.1)}
+.metric-card.red:hover{box-shadow:0 8px 24px rgba(255,92,92,.1)}
+.metric-card.blue:hover{box-shadow:0 8px 24px rgba(79,158,255,.1)}
+.metric-card.amber:hover{box-shadow:0 8px 24px rgba(245,158,11,.1)}
+
+/* ===== VIEW TRANSITIONS ===== */
+.view{animation:viewIn .25s ease}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ===== KEYBOARD HINTS ===== */
+.kbd{display:inline-block;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:1px 5px;font-size:10px;font-family:var(--f2);color:var(--t3);font-weight:500;line-height:1.4;vertical-align:middle;margin-left:auto}
+
+/* ===== LOGO GLOW ===== */
+.logo-icon{position:relative}
+.logo-icon::after{content:'';position:absolute;inset:-4px;border-radius:14px;background:linear-gradient(135deg,rgba(0,212,161,.25),rgba(79,158,255,.25));filter:blur(8px);z-index:-1;opacity:0;transition:opacity .3s}
+.logo:hover .logo-icon::after{opacity:1}
+
+/* ===== SIDEBAR FOOTER ===== */
+.sidebar-version{font-size:10px;color:var(--t3);padding:8px 8px 0;text-align:center;opacity:.6}
+.sidebar-version a{color:var(--t3);text-decoration:none}.sidebar-version a:hover{color:var(--green)}
+
+/* ===== TOOLTIP ===== */
+.metric-card{position:relative}
+.metric-card .tooltip{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--bg3);color:var(--t2);font-size:11px;padding:6px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;transition:opacity .15s;z-index:50;border:1px solid var(--border2);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.metric-card .tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--bg3)}
+.metric-card:hover .tooltip{visibility:visible;opacity:1}
+
+/* ===== HAMBURGER BUTTON ===== */
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--t2);font-size:20px;line-height:1}
+.hamburger:hover{color:var(--t1)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+.sidebar-overlay.show{display:block}
+
+/* ===== NAV ITEM SHIMMER ===== */
+.nav-item.active{position:relative;overflow:hidden}
+.nav-item.active::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,212,161,.06),transparent);animation:navShimmer 3s ease-in-out infinite}
+@keyframes navShimmer{0%{left:-100%}50%{left:100%}100%{left:100%}}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .metrics-row{grid-template-columns:repeat(2,1fr)}
+  .analytics-grid{grid-template-columns:1fr}
+  .detail-stats{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .hamburger{display:block}
+  #sidebar{position:fixed;left:-260px;width:260px;min-width:260px;z-index:50;transition:left .25s ease;box-shadow:none}
+  #sidebar.open{left:0;box-shadow:4px 0 24px rgba(0,0,0,.6)}
+  body{flex-direction:column}
+  #main{width:100%}
+  #topbar{padding:10px 14px}
+  #content{padding:14px}
+  .metrics-row{grid-template-columns:1fr 1fr;gap:10px}
+  .product-grid{grid-template-columns:1fr}
+  .search-wrap{max-width:100%}
+  .search-wrap input{font-size:12px;padding:8px 30px 8px 32px}
+  .topbar-actions .btn span.desk-only{display:none}
+  .filter-bar{gap:6px}
+  .filter-bar select{font-size:11.5px;padding:6px 8px}
+  .modal{width:95%;max-width:95%}
+  .modal.wide{max-width:95%}
+  .compare-selector{gap:6px}
+  .compare-chip{font-size:11px;padding:5px 8px}
+  .kbd{display:none}
+}
+@media(max-width:480px){
+  .metrics-row{grid-template-columns:1fr}
+  .detail-stats{grid-template-columns:1fr 1fr}
+  .form-row{grid-template-columns:1fr}
+  .metric-value{font-size:22px}
+  .detail-price{font-size:28px}
+}
 </style>
 </head>
 <body>
@@ -252,6 +350,9 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
     <div class="loading-text" id="loading-text">Loading products...</div>
   </div>
 </div>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
 <nav id="sidebar">
@@ -278,12 +379,14 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
     <div class="sidebar-stat">Alerts Active <span id="sf-alerts">0</span></div>
     <div class="sidebar-stat">Total Savings <span id="sf-savings">₹0</span></div>
     <div class="sidebar-stat last-updated" id="sf-updated" style="font-size:10px;color:var(--t3)">Not refreshed yet</div>
+    <div class="sidebar-version">v1.0 · Made with ❤️ · <a href="#" title="Keyboard shortcuts: / Search · N New · R Refresh · Esc Close">⌨ Shortcuts</a></div>
   </div>
 </nav>
 
 <!-- MAIN -->
 <div id="main">
   <div id="topbar">
+    <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="search-input" placeholder="Search products… or paste Amazon/Flipkart URL" oninput="handleSearch(this.value)" onpaste="handlePaste(event)">
@@ -291,8 +394,8 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
       <div class="url-hint" id="url-hint" onclick="addFromURLHint()">🟠 URL detected — click to track this product</div>
     </div>
     <div class="topbar-actions">
-      <button class="btn btn-ghost" onclick="openAddModal()">+ Add Product</button>
-      <button class="btn btn-primary" onclick="doRefresh()" id="refresh-btn">🔄 Refresh</button>
+      <button class="btn btn-ghost" onclick="openAddModal()">+ Add Product <span class="kbd">N</span></button>
+      <button class="btn btn-primary" onclick="doRefresh()" id="refresh-btn">🔄 Refresh <span class="kbd" style="background:rgba(0,0,0,.2);border-color:rgba(0,0,0,.2);color:rgba(6,10,20,.6)">R</span></button>
       <div class="notif-btn" onclick="toggleNotifPanel()" id="notif-btn">🔔<div class="notif-dot" id="notif-dot"></div></div>
     </div>
   </div>
@@ -301,10 +404,10 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
       <div class="metrics-row">
-        <div class="metric-card blue"><div class="metric-label">Products Tracked</div><div class="metric-value blue" id="m-total">0</div><div class="metric-sub">across all platforms</div></div>
-        <div class="metric-card green"><div class="metric-label">Total Savings</div><div class="metric-value green" id="m-savings">₹0</div><div class="metric-sub">from highest tracked price</div></div>
-        <div class="metric-card amber"><div class="metric-label">Alerts Active</div><div class="metric-value amber" id="m-alerts">0</div><div class="metric-sub">waiting for target price</div></div>
-        <div class="metric-card red"><div class="metric-label">Price Drops</div><div class="metric-value red" id="m-drops">0</div><div class="metric-sub">vs. when added</div></div>
+        <div class="metric-card blue"><div class="tooltip">Total products you're tracking across Amazon & Flipkart</div><div class="metric-label">Products Tracked</div><div class="metric-value blue" id="m-total">0</div><div class="metric-sub">across all platforms</div></div>
+        <div class="metric-card green"><div class="tooltip">Cumulative savings from highest tracked price to current</div><div class="metric-label">Total Savings</div><div class="metric-value green" id="m-savings">₹0</div><div class="metric-sub">from highest tracked price</div></div>
+        <div class="metric-card amber"><div class="tooltip">Active alerts waiting for price to hit your target</div><div class="metric-label">Alerts Active</div><div class="metric-value amber" id="m-alerts">0</div><div class="metric-sub">waiting for target price</div></div>
+        <div class="metric-card red"><div class="tooltip">Products whose price dropped since you started tracking</div><div class="metric-label">Price Drops</div><div class="metric-value red" id="m-drops">0</div><div class="metric-sub">vs. when added</div></div>
       </div>
       <div class="filter-bar">
         <select id="filter-platform" onchange="applyFilters()"><option value="all">All Platforms</option><option value="amazon">Amazon</option><option value="flipkart">Flipkart</option></select>
@@ -554,7 +657,7 @@ async function doRefresh() {
   } catch (err) {
     showToast('Refresh failed: ' + err.message, 'red');
   } finally {
-    btn.textContent = '🔄 Refresh';
+    btn.innerHTML = '🔄 Refresh <span class="kbd" style="background:rgba(0,0,0,.2);border-color:rgba(0,0,0,.2);color:rgba(6,10,20,.6)">R</span>';
     btn.disabled = false;
     hideGlobalLoading();
   }
@@ -580,10 +683,10 @@ function updateMetrics() {
   const savings = p.reduce((s,x) => s + Math.max(0, x.highestPrice - x.currentPrice), 0);
   const active = p.filter(x => x.alertEnabled && !x.alertTriggered).length;
   const drops = p.filter(x => x.priceHistory.length > 1 && x.currentPrice < x.priceHistory[0].price).length;
-  document.getElementById('m-total').textContent = p.length;
-  document.getElementById('m-savings').textContent = fmt(savings);
-  document.getElementById('m-alerts').textContent = active;
-  document.getElementById('m-drops').textContent = drops;
+  animateCountUp('m-total', p.length);
+  animateCountUp('m-savings', Math.round(savings), '₹');
+  animateCountUp('m-alerts', active);
+  animateCountUp('m-drops', drops);
 }
 
 function updateSidebar() {
@@ -1455,6 +1558,86 @@ async function generateDemoHistory() {
     btn.disabled = false;
     btn.textContent = '📈 Generate Demo History';
   }
+}
+
+// ===================== MOBILE SIDEBAR =====================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+// Close sidebar when nav item clicked on mobile
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeSidebar();
+  });
+});
+
+// ===================== KEYBOARD SHORTCUTS =====================
+document.addEventListener('keydown', e => {
+  // Don't trigger shortcuts when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  switch(e.key) {
+    case '/':
+      e.preventDefault();
+      document.getElementById('search-input').focus();
+      break;
+    case 'n': case 'N':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); openAddModal(); }
+      break;
+    case 'r': case 'R':
+      if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); doRefresh(); }
+      break;
+    case 'Escape':
+      // Close modals in priority order
+      if (document.getElementById('confirm-overlay').classList.contains('show')) return; // confirm handles its own
+      if (document.getElementById('modal-detail-overlay').classList.contains('show')) closeModal('detail');
+      else if (document.getElementById('modal-add-overlay').classList.contains('show')) closeModal('add');
+      else if (document.getElementById('notif-panel').classList.contains('show')) document.getElementById('notif-panel').classList.remove('show');
+      else if (window.innerWidth <= 768) closeSidebar();
+      break;
+  }
+});
+
+// ===================== COUNT-UP ANIMATION =====================
+function animateCountUp(elementId, targetValue, prefix = '', suffix = '', duration = 600) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const startValue = parseInt(el.textContent.replace(/[^\d]/g, '')) || 0;
+  if (startValue === targetValue) { el.textContent = prefix + targetValue.toLocaleString('en-IN') + suffix; return; }
+  const startTime = performance.now();
+  function step(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = Math.round(startValue + (targetValue - startValue) * eased);
+    el.textContent = prefix + current.toLocaleString('en-IN') + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ===================== RELATIVE TIME =====================
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return diffMin + 'm ago';
+  if (diffHr < 24) return diffHr + 'h ago';
+  if (diffDay < 7) return diffDay + 'd ago';
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 // ===================== START =====================

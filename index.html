@@ -259,6 +259,37 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 .tag-input-wrap{display:flex;flex-wrap:wrap;gap:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:8px;cursor:text}
 .tag-input-wrap input{border:none;background:transparent;outline:none;color:var(--t1);font-size:13px;font-family:var(--f1);min-width:100px;flex:1}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ===== AUTH ===== */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:200;display:none;align-items:center;justify-content:center}
+.auth-overlay.show{display:flex}
+.auth-box{background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r3);width:90%;max-width:400px;padding:32px 28px;animation:modalIn .2s ease}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.auth-logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.auth-logo-text{font-size:20px;font-weight:800;letter-spacing:-.5px}.auth-logo-text span{color:var(--green)}
+.auth-tabs{display:flex;background:var(--bg2);border-radius:var(--r1);padding:3px;gap:3px;margin-bottom:22px}
+.auth-tab{flex:1;padding:7px;text-align:center;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--t3);transition:all .15s}
+.auth-tab.active{background:var(--bg3);color:var(--t1)}
+.auth-field{margin-bottom:14px}
+.auth-field label{display:block;font-size:12px;font-weight:600;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.auth-field input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r1);padding:10px 14px;color:var(--t1);font-size:14px;font-family:var(--f1);outline:none;transition:border .15s}
+.auth-field input:focus{border-color:rgba(79,158,255,.5)}
+.auth-error{background:var(--red-d);border:1px solid rgba(255,92,92,.25);border-radius:var(--r1);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;display:none}
+.auth-info{background:var(--blue-d);border:1px solid rgba(79,158,255,.25);border-radius:var(--r1);padding:10px 14px;font-size:13px;color:var(--blue);margin-bottom:14px;display:none}
+.auth-btn{width:100%;padding:11px;border-radius:var(--r1);background:var(--green);color:#060a14;font-size:14px;font-weight:700;font-family:var(--f1);border:none;cursor:pointer;transition:all .15s;margin-top:4px}
+.auth-btn:hover{background:#00e6ae}.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-skip{text-align:center;margin-top:14px;font-size:12.5px;color:var(--t3)}
+.auth-skip a{color:var(--blue);cursor:pointer;text-decoration:underline}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r1);margin-bottom:8px;cursor:default}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#060a14;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-email{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-logout{background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;padding:2px;transition:color .15s;flex-shrink:0}
+.user-logout:hover{color:var(--red)}
+.login-prompt{padding:8px 10px;margin-bottom:8px;font-size:12px;color:var(--t3);text-align:center}
+.login-prompt a{color:var(--green);cursor:pointer;font-weight:600;text-decoration:none}
+.login-prompt a:hover{text-decoration:underline}
 .real-badge{display:inline-flex;align-items:center;gap:4px;background:var(--green-d);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid rgba(0,212,161,.2)}
 .last-updated{font-size:11px;color:var(--t3);font-family:var(--f2)}
 
@@ -356,6 +387,53 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 </head>
 <body>
 
+<!-- AUTH MODAL -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🦅</div>
+      <div class="auth-logo-text">Price<span>Hawk</span></div>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</div>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-info" id="auth-info"></div>
+
+    <!-- Login fields -->
+    <div id="auth-login-fields">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+    </div>
+
+    <!-- Signup extra field -->
+    <div id="auth-signup-fields" style="display:none">
+      <div class="auth-field">
+        <label>Name (optional)</label>
+        <input type="text" id="auth-name" placeholder="Your name" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="auth-email2" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <div class="auth-field">
+        <label>Password (min. 8 characters)</label>
+        <input type="password" id="auth-password2" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+    </div>
+
+    <button class="auth-btn" id="auth-submit-btn" onclick="doAuth()">Sign In</button>
+    <div class="auth-skip">Just browsing? <a onclick="closeAuthModal()">Continue without account</a></div>
+  </div>
+</div>
+
 <!-- GLOBAL LOADING -->
 <div id="global-loading">
   <div style="text-align:center">
@@ -390,6 +468,9 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
   <div class="nav-item" onclick="doRefresh()" id="nav-refresh"><span class="ni">🔄</span> Refresh Prices</div>
   <div class="nav-item" onclick="exportCSV()"><span class="ni">📤</span> Export CSV</div>
   <div class="sidebar-footer">
+    <div id="sidebar-user-area">
+      <!-- Filled by renderUserArea() -->
+    </div>
     <div class="sidebar-stat">Products <span id="sf-products">0</span></div>
     <div class="sidebar-stat">Alerts Active <span id="sf-alerts">0</span></div>
     <div class="sidebar-stat">Total Savings <span id="sf-savings">₹0</span></div>
@@ -614,6 +695,7 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
         <div>
           <label class="form-label">📧 Email Notifications (Optional)</label>
           <input class="form-input" id="add-email" type="email" placeholder="Enter your email to get notified when target is hit" onkeydown="if(event.key==='Enter') finalizeTracking()">
+          <div id="add-email-hint" style="font-size:11.5px;color:var(--green);margin-top:4px;display:none">✓ Will use your account email</div>
         </div>
       </div>
 
@@ -646,6 +728,142 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
 </div>
 
 <script>
+// ===================== AUTH =====================
+let currentUser = JSON.parse(localStorage.getItem('ph_user') || 'null');
+
+function saveUser(user) {
+  currentUser = user;
+  if (user) localStorage.setItem('ph_user', JSON.stringify(user));
+  else localStorage.removeItem('ph_user');
+  renderUserArea();
+  updateAddModalEmailHint();
+}
+
+function renderUserArea() {
+  const el = document.getElementById('sidebar-user-area');
+  if (!el) return;
+  if (currentUser) {
+    const initials = (currentUser.name || currentUser.email || '?').slice(0, 2).toUpperCase();
+    el.innerHTML = `
+      <div class="user-chip">
+        <div class="user-avatar">${initials}</div>
+        <div class="user-info">
+          <div class="user-name">${currentUser.name || 'Account'}</div>
+          <div class="user-email">${currentUser.email}</div>
+        </div>
+        <button class="user-logout" onclick="doLogout()" title="Sign out">⏏</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="login-prompt">
+        <a onclick="openAuthModal()">🔐 Sign in</a> to sync alerts across devices
+      </div>`;
+  }
+}
+
+function updateAddModalEmailHint() {
+  const input = document.getElementById('add-email');
+  const hint = document.getElementById('add-email-hint');
+  if (!input || !hint) return;
+  if (currentUser) {
+    input.value = currentUser.email;
+    input.style.display = 'none';
+    hint.style.display = 'block';
+  } else {
+    input.value = '';
+    input.style.display = '';
+    hint.style.display = 'none';
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('auth-overlay').classList.add('show');
+  document.getElementById('auth-email').focus();
+  clearAuthMessages();
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-overlay').classList.remove('show');
+  clearAuthMessages();
+}
+
+function clearAuthMessages() {
+  const err = document.getElementById('auth-error');
+  const info = document.getElementById('auth-info');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  if (info) { info.style.display = 'none'; info.textContent = ''; }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-info').style.display = 'none';
+}
+
+function showAuthInfo(msg) {
+  const el = document.getElementById('auth-info');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+let _authTab = 'login';
+function switchAuthTab(tab) {
+  _authTab = tab;
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('auth-login-fields').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('auth-signup-fields').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('auth-submit-btn').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+  clearAuthMessages();
+}
+
+async function doAuth() {
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = true;
+  clearAuthMessages();
+
+  try {
+    if (_authTab === 'login') {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) { showAuthError('Please fill in all fields.'); return; }
+
+      const data = await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'login', email, password }) });
+      saveUser(data.user);
+      closeAuthModal();
+      showToast(`👋 Welcome back, ${data.user.name || data.user.email.split('@')[0]}!`, 'green');
+
+    } else {
+      const name = document.getElementById('auth-name').value.trim();
+      const email = document.getElementById('auth-email2').value.trim();
+      const password = document.getElementById('auth-password2').value;
+      if (!email || !password) { showAuthError('Please fill in email and password.'); return; }
+
+      const data = await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'signup', email, password, name }) });
+
+      if (data.requiresConfirmation) {
+        showAuthInfo('📧 Check your email to confirm your account, then sign in.');
+        switchAuthTab('login');
+        document.getElementById('auth-email').value = email;
+      } else {
+        saveUser(data.user);
+        closeAuthModal();
+        showToast('🎉 Account created! Email alerts are now enabled.', 'green');
+      }
+    }
+  } catch (err) {
+    showAuthError(err.message || 'Something went wrong. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doLogout() {
+  try { await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'logout' }) }); } catch {}
+  saveUser(null);
+  showToast('Signed out.', 'blue');
+}
+
 // ===================== SESSION + API =====================
 const SESSION_ID = (() => {
   let id = localStorage.getItem('ph_session_v3');
@@ -705,6 +923,7 @@ function untrackId(id) {
 
 // ===================== INIT =====================
 async function init() {
+  renderUserArea();
   showGlobalLoading('Loading your dashboard…');
   try {
     if (state.trackedIds.length > 0) {
@@ -974,6 +1193,7 @@ function openAddModal() {
   document.getElementById('track-btn').textContent = '🔍 Fetch & Track';
   document.getElementById('track-btn').onclick = startTracking;
   document.getElementById('modal-add-overlay').classList.add('show');
+  updateAddModalEmailHint();
   if (_pendingURL) {
     document.getElementById('add-url').value = _pendingURL;
     onURLInput(_pendingURL);
@@ -1091,7 +1311,8 @@ async function startTracking() {
 async function finalizeTracking() {
   if (!_fetchedData) return;
   const target = parseFloat(document.getElementById('add-target').value);
-  const email = document.getElementById('add-email').value.trim();
+  // Use logged-in user email first, fallback to manual input
+  const email = (currentUser && currentUser.email) || document.getElementById('add-email').value.trim();
   if (!isNaN(target) && target > 0) {
     // We added the new product to the front of trackedIds
     if (state.trackedIds.length > 0) {
@@ -1102,15 +1323,21 @@ async function finalizeTracking() {
         try {
           await api('/api/alerts', {
             method: 'POST',
-            body: JSON.stringify({ product_id: topId, email, target_price: target })
+            body: JSON.stringify({
+              product_id: topId,
+              email,
+              target_price: target,
+              user_id: currentUser ? currentUser.id : null
+            })
           });
           savePrefs(topId, { emailAlert: email });
-          showToast(`🔔 Email Alert set for ${fmt(target)}!`, 'green');
+          showToast(`🔔 Email alert set for ${fmt(target)} — we'll email ${email}!`, 'green');
         } catch (e) {
-          showToast(`⚠️ Local alert set, but email failed: ${e.message}`, 'amber');
+          showToast(`⚠️ Local alert set, but email registration failed: ${e.message}`, 'amber');
         }
       } else {
         showToast(`🔔 Local alert set for ${fmt(target)}!`, 'green');
+        addNotif({ type: 'tip', text: 'Sign in to get email notifications for price drops.' });
       }
       await init();
     }

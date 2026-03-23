@@ -20,18 +20,22 @@ module.exports = async (req, res) => {
   try {
     switch (req.method) {
       case 'POST': {
-        const { product_id, email, target_price } = req.body || {};
+        const { product_id, email, target_price, user_id } = req.body || {};
         if (!product_id || !email || !target_price) {
           return res.status(400).json({ error: 'product_id, email, and target_price are required' });
         }
 
+        const record = {
+          product_id,
+          email: email.toLowerCase().trim(),
+          target_price: parseFloat(target_price),
+        };
+        if (user_id) record.user_id = user_id;
+
         // Upsert the alert (if they already have an alert for this product, update the target price)
         const { error } = await supabase
           .from('email_alerts')
-          .upsert(
-            { product_id, email: email.toLowerCase().trim(), target_price: parseFloat(target_price) },
-            { onConflict: 'email,product_id' }
-          );
+          .upsert(record, { onConflict: 'email,product_id' });
 
         if (error) throw error;
         return res.status(200).json({ success: true, message: 'Alert registered successfully' });

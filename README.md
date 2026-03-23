@@ -156,3 +156,45 @@ pricehawk/
 **Function timeout:**
 - Scraping can take 10–25 seconds; this is normal
 - If it times out, try again (Netlify free tier has 10s timeout for sync functions)
+
+
+---
+
+## Login & Email Alerts Setup
+
+### Supabase Auth
+1. In your Supabase project go to **Authentication → Providers** and confirm **Email** is enabled.
+2. Under **Authentication → URL Configuration** set your deployed site URL.
+3. Optionally disable **Confirm email** (under Authentication → Settings) for easier local testing.
+
+### Email Alerts (Resend)
+1. Sign up at [resend.com](https://resend.com) and create an API key.
+2. Add `RESEND_API_KEY = re_xxxx...` to your environment variables in Vercel/Netlify.
+3. Update the `from:` address in `api/scheduled-refresh.js` to a domain you own and have verified in Resend.
+
+### Environment Variables (full list)
+```
+SUPABASE_URL        = https://xxxx.supabase.co
+SUPABASE_ANON_KEY   = eyJhbG...
+SCRAPER_API_KEY     = your_scraperapi_key
+RESEND_API_KEY      = re_xxxx...         (optional — email alerts)
+```
+
+### Schema Migration
+If you already have a live database, run this in the Supabase SQL editor to add the new columns:
+```sql
+ALTER TABLE products ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+CREATE TABLE IF NOT EXISTS email_alerts (
+  id           uuid default gen_random_uuid() primary key,
+  product_id   uuid references products(id) on delete cascade,
+  user_id      uuid references auth.users(id) on delete cascade,
+  email        text not null,
+  target_price numeric(12, 2) not null,
+  created_at   timestamptz default now(),
+  unique(email, product_id)
+);
+CREATE INDEX IF NOT EXISTS idx_email_alerts_prod ON email_alerts(product_id);
+ALTER TABLE email_alerts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Open access email_alerts" ON email_alerts FOR ALL USING (true) WITH CHECK (true);
+```
+

@@ -328,10 +328,10 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--f1);min-height:100v
   .hamburger{display:block}
   #sidebar{position:fixed;left:-260px;width:260px;min-width:260px;z-index:50;transition:left .25s ease;box-shadow:none}
   #sidebar.open{left:0;box-shadow:4px 0 24px rgba(0,0,0,.6)}
-  body{flex-direction:column}
-  #main{width:100%}
+  body{flex-direction:column;overflow-y:auto;overflow-x:hidden}
+  #main{width:100%;height:auto;min-height:100vh;overflow:visible}
+  #content{overflow-y:visible;height:auto;padding:14px}
   #topbar{padding:10px 14px}
-  #content{padding:14px}
   .metrics-row{grid-template-columns:1fr 1fr;gap:10px}
   .product-grid{grid-template-columns:1fr}
   .search-wrap{max-width:100%}

@@ -114,6 +114,28 @@ function parseAmazon($, html) {
 }
 
 // ─── FLIPKART ───────────────────────────────────────────────
+// Generic category names that should NOT be treated as product names
+const CATEGORY_WORDS = new Set([
+  'electronics', 'mobiles', 'mobile', 'laptops', 'laptop', 'computers', 'computer',
+  'fashion', 'clothing', 'men', 'women', 'kids', 'beauty', 'health', 'sports',
+  'home', 'kitchen', 'appliances', 'furniture', 'grocery', 'toys', 'books',
+  'automotive', 'baby', 'garden', 'tools', 'office', 'accessories', 'gaming',
+  'television', 'televisions', 'tv', 'audio', 'camera', 'cameras', 'watches',
+  'shoes', 'bags', 'jewelry', 'jewellery', 'fitness', 'travel', 'stationery',
+  'smartphones', 'smartphone', 'tablets', 'tablet', 'headphones', 'speakers',
+]);
+
+function isGenericCategory(str) {
+  if (!str) return true;
+  const lower = str.toLowerCase().trim();
+  // Exact match or very short (likely a category breadcrumb)
+  if (CATEGORY_WORDS.has(lower)) return true;
+  // Two-word combos like "Mobile Phones", "Home Appliances"
+  const words = lower.split(/\s+/);
+  if (words.length <= 2 && words.every(w => CATEGORY_WORDS.has(w) || w.length <= 3)) return true;
+  return false;
+}
+
 function parseFlipkart($, html) {
   let price = null;
   let name = null;
@@ -136,13 +158,17 @@ function parseFlipkart($, html) {
       }
     }
     if (!name) {
+      // Try specific product title keys first, then generic "title" last
       for (const pat of [
-        /"title"\s*:\s*"([^"]{10,200})"/,
         /"productTitle"\s*:\s*"([^"]{10,200})"/,
-        /"name"\s*:\s*"([^"]{10,200})"/,
+        /"productName"\s*:\s*"([^"]{10,200})"/,
+        /"product_name"\s*:\s*"([^"]{10,200})"/,
+        /"itemName"\s*:\s*"([^"]{10,200})"/,
+        /"name"\s*:\s*"([^"]{15,200})"/,
+        /"title"\s*:\s*"([^"]{20,200})"/,
       ]) {
         const m = src.match(pat);
-        if (m && !m[1].includes('\\u') && !m[1].startsWith('http') && !/^(buy|shop|sell)/i.test(m[1])) {
+        if (m && !m[1].includes('\\u') && !m[1].startsWith('http') && !/^(buy|shop|sell)/i.test(m[1]) && !isGenericCategory(m[1])) {
           name = m[1].replace(/\\n/g, '').replace(/\s+/g, ' ').trim();
           break;
         }
@@ -161,7 +187,7 @@ function parseFlipkart($, html) {
             const p = toNum(String(item.offers.price || item.offers.lowPrice || ''));
             if (p && p > 100) price = p;
           }
-          if (!name && item.name && item.name.length > 5 && !/^(buy|shop)/i.test(item.name)) {
+          if (!name && item.name && item.name.length > 10 && !/^(buy|shop)/i.test(item.name) && !isGenericCategory(item.name)) {
             name = item.name;
           }
         }
@@ -190,7 +216,7 @@ function parseFlipkart($, html) {
         .replace(/\s*in india.*$/i, '')
         .replace(/\s+/g, ' ')
         .trim();
-      if (name.length < 4) name = null;
+      if (name.length < 4 || isGenericCategory(name)) name = null;
     }
   }
 
@@ -202,7 +228,8 @@ function parseFlipkart($, html) {
     }
   }
   if (!name) {
-    name = ($('span.B_NuCI').text().trim() || $('h1._6EBuvT').text().trim() || $('h1').first().text().trim()).replace(/\s+/g, ' ').trim() || null;
+    const cssName = ($('span.B_NuCI').text().trim() || $('h1._6EBuvT').text().trim() || $('h1.yhB1nd').text().trim() || $('h1 span').first().text().trim() || $('h1').first().text().trim()).replace(/\s+/g, ' ').trim();
+    if (cssName && cssName.length > 4 && !isGenericCategory(cssName)) name = cssName;
   }
 
   // MRP

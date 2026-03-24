@@ -81,23 +81,23 @@ module.exports = async (req, res) => {
               subject: `🦅 Price Drop: ${product.name.slice(0, 50)} is now ₹${newPrice}`,
               html: `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#060a14;font-family:'Helvetica Neue',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#101418;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:480px;margin:40px auto;background:#0c1120;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#00d4a1,#4f9eff);padding:24px 28px;display:flex;align-items:center;gap:12px;">
+    <div style="background:linear-gradient(135deg,#4dd0e1,#4f9eff);padding:24px 28px;display:flex;align-items:center;gap:12px;">
       <span style="font-size:28px;">🦅</span>
-      <span style="font-size:20px;font-weight:800;color:#060a14;letter-spacing:-0.5px;">PriceHawk</span>
-      <span style="margin-left:auto;background:rgba(6,10,20,0.2);color:#060a14;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">PRICE ALERT</span>
+      <span style="font-size:20px;font-weight:800;color:#101418;letter-spacing:-0.5px;">PriceHawk</span>
+      <span style="margin-left:auto;background:rgba(6,10,20,0.2);color:#101418;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">PRICE ALERT</span>
     </div>
     <!-- Body -->
     <div style="padding:28px;">
       <p style="color:#94a3b8;font-size:13px;margin:0 0 6px;">Your target price was reached!</p>
       <h2 style="color:#f1f5f9;font-size:16px;font-weight:700;margin:0 0 20px;line-height:1.4;">${product.name}</h2>
       <!-- Price row -->
-      <div style="background:#111827;border-radius:12px;padding:18px;margin-bottom:20px;display:flex;align-items:center;gap:20px;">
+      <div style="background:#22272e;border-radius:12px;padding:18px;margin-bottom:20px;display:flex;align-items:center;gap:20px;">
         <div>
           <div style="color:#475569;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Current Price</div>
-          <div style="color:#00d4a1;font-size:28px;font-weight:800;font-family:'Courier New',monospace;">₹${newPrice.toLocaleString('en-IN')}</div>
+          <div style="color:#4dd0e1;font-size:28px;font-weight:800;font-family:'Courier New',monospace;">₹${newPrice.toLocaleString('en-IN')}</div>
         </div>
         <div style="color:#475569;font-size:20px;">→</div>
         <div>
@@ -105,7 +105,7 @@ module.exports = async (req, res) => {
           <div style="color:#94a3b8;font-size:20px;font-weight:700;font-family:'Courier New',monospace;">₹${alert.target_price.toLocaleString('en-IN')}</div>
         </div>
       </div>
-      <a href="${product.url}" style="display:block;text-align:center;padding:14px;background:#00d4a1;color:#060a14;text-decoration:none;border-radius:10px;font-size:15px;font-weight:800;letter-spacing:-0.3px;">
+      <a href="${product.url}" style="display:block;text-align:center;padding:14px;background:#4dd0e1;color:#101418;text-decoration:none;border-radius:10px;font-size:15px;font-weight:800;letter-spacing:-0.3px;">
         Buy on ${product.platform === 'amazon' ? 'Amazon' : 'Flipkart'} →
       </a>
       <p style="color:#475569;font-size:11.5px;margin:20px 0 0;text-align:center;">This alert has been removed. Track the product again to set a new one.</p>

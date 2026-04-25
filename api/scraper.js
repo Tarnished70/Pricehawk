@@ -5,8 +5,8 @@ async function scrapeUrl(url, platform) {
 
   const fetchUrl = SCRAPER_API_KEY
     ? platform === 'amazon'
-      ? `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&autoparse=true`
-      : `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&country_code=in&render=false&device_type=mobile`
+      ? `https://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&autoparse=true`
+      : `https://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&country_code=in&render=false&device_type=mobile`
     : url;
 
   const options = {

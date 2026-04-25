@@ -1474,6 +1474,22 @@ body{
             <div id="track-progress-fill" style="height:100%;background:var(--green);border-radius:2px;width:0%;transition:width 0.3s"></div>
           </div>
         </div>
+
+        <!-- Manual entry fallback (shown when scraper fails) -->
+        <div id="manual-entry" style="display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:10px">✏️ Enter details manually</div>
+          <div style="display:flex;gap:10px;margin-bottom:10px">
+            <div style="flex:2">
+              <label class="form-label">Product Name</label>
+              <input class="form-input" id="manual-name" type="text" placeholder="e.g. Samsung Galaxy S24">
+            </div>
+            <div style="flex:1">
+              <label class="form-label">Current Price (₹)</label>
+              <input class="form-input" id="manual-price" type="number" placeholder="e.g. 59999" min="1">
+            </div>
+          </div>
+          <button class="btn btn-amber btn-sm" onclick="submitManual()" style="width:100%">✅ Track with manual price</button>
+        </div>
       </div>
 
       <!-- STEP 2: Optional alert price (shown after successful fetch) -->
@@ -2000,6 +2016,9 @@ function openAddModal() {
   document.getElementById('platform-detect-badge').style.display = 'none';
   document.getElementById('track-status').style.display = 'none';
   document.getElementById('step-alert').style.display = 'none';
+  document.getElementById('manual-entry').style.display = 'none';
+  document.getElementById('manual-name').value = '';
+  document.getElementById('manual-price').value = '';
   document.getElementById('track-btn').textContent = '🔍 Fetch & Track';
   document.getElementById('track-btn').onclick = startTracking;
   document.getElementById('modal-add-overlay').classList.add('show');
@@ -2049,6 +2068,9 @@ async function startTracking() {
   const plat = detectPlatform(url);
   if (!plat) { showToast('Only Amazon.in and Flipkart.com are supported', 'red'); return; }
 
+  // Hide manual entry if visible
+  document.getElementById('manual-entry').style.display = 'none';
+
   const btn = document.getElementById('track-btn');
   btn.disabled = true;
   btn.textContent = '⟳ Fetching…';
@@ -2061,41 +2083,71 @@ async function startTracking() {
     const data = await api('/api/scrape', { method: 'POST', body: JSON.stringify({ url }) });
 
     if (!data.price) {
-      setTrackStatus('error', '⚠️ Could not find price. The product may be out of stock or requires a ScraperAPI key.');
-      btn.disabled = false; btn.textContent = '🔍 Fetch & Track';
+      setTrackStatus('error', '⚠️ Auto-fetch failed — enter details manually below, or add a ScraperAPI key in your env vars.');
+      document.getElementById('manual-entry').style.display = 'block';
+      document.getElementById('manual-name').focus();
+      btn.disabled = false; btn.textContent = '🔍 Retry Fetch';
       return;
     }
 
-    _fetchedData = { ...data, url, platform: plat };
-    setTrackStatus('success', `✅ Found! Saving to your dashboard…`, false, 100);
+    await _finishTracking(data, url, plat, btn);
 
+  } catch (err) {
+    setTrackStatus('error', '❌ ' + (err.message || 'Network error. Check your connection.'));
+    document.getElementById('manual-entry').style.display = 'block';
+    btn.disabled = false; btn.textContent = '🔍 Retry Fetch';
+  }
+}
+
+async function submitManual() {
+  const url = document.getElementById('add-url').value.trim();
+  const name = document.getElementById('manual-name').value.trim();
+  const price = parseFloat(document.getElementById('manual-price').value);
+  const plat = detectPlatform(url);
+
+  if (!name) { showToast('Enter a product name', 'red'); return; }
+  if (!price || price <= 0) { showToast('Enter a valid price', 'red'); return; }
+
+  const btn = document.getElementById('track-btn');
+  btn.disabled = true;
+  document.getElementById('manual-entry').style.display = 'none';
+  setTrackStatus('loading', 'Saving to dashboard…', true, 60);
+
+  try {
+    await _finishTracking({ price, name, originalPrice: null }, url, plat || 'amazon', btn);
+  } catch (err) {
+    setTrackStatus('error', '❌ ' + err.message);
+    btn.disabled = false;
+  }
+}
+
+async function _finishTracking(data, url, plat, btn) {
+    _fetchedData = { ...data, url, platform: plat };
     setTrackStatus('loading', `Checking database…`, true, 75);
 
-    // Save/Search globally
     const res = await api('/api/products', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name || urlToName(url, plat),
         url,
         platform: plat,
-        category: document.getElementById('add-category').value,
+        category: document.getElementById('add-category') ? document.getElementById('add-category').value : 'Electronics',
         currentPrice: data.price,
         originalPrice: data.originalPrice || null
       })
     });
 
     const newId = res.id;
-    trackId(newId); // add to local tracked array
-    
+    trackId(newId);
+
     if (res.isNew) {
       showToast('🎉 New product added globally!', 'green');
     } else {
       showToast('⚡ Found instantly in global database!', 'blue');
     }
 
-    await init(); // Fetch fresh list w/ preferences
+    await init();
 
-    // Show the optional alert step
     document.getElementById('fetched-name').textContent = (data.name || urlToName(url, plat)).slice(0, 60);
     document.getElementById('fetched-price').textContent = fmt(data.price);
     const mrpEl = document.getElementById('fetched-mrp');
@@ -2105,17 +2157,12 @@ async function startTracking() {
     pb.className = 'platform-badge ' + plat;
     pb.textContent = plat === 'amazon' ? '🟠 Amazon' : '🔵 Flipkart';
     document.getElementById('step-alert').style.display = 'block';
-    setTrackStatus('success', `✅ ${fmt(data.price)} — Tracked on your dashboard! Set an alert below.`, false, 100);
+    setTrackStatus('success', `✅ ${fmt(data.price)} — Tracked! Set an alert below.`, false, 100);
 
     btn.disabled = false;
     btn.textContent = '✅ Done — Close';
     btn.onclick = () => closeModal('add');
     addNotif({ type: 'add', text: 'Started tracking: ' + (data.name || url).slice(0, 40) });
-
-  } catch (err) {
-    setTrackStatus('error', '❌ ' + err.message);
-    btn.disabled = false; btn.textContent = '🔍 Fetch & Track';
-  }
 }
 
 async function finalizeTracking() {
